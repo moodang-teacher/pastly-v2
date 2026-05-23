@@ -199,18 +199,18 @@ export default function StudentsPage() {
                 <button
                   onClick={assignChecked}
                   disabled={!selectedCohort}
-                  className="text-xs font-bold text-brand-600 dark:text-brand-400 disabled:opacity-40"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-xl disabled:opacity-40 active:scale-95 transition-all"
                 >
-                  선택 {checkedIds.size}명 배정
+                  <UserPlus size={13} /> 선택 {checkedIds.size}명 배정
                 </button>
               )}
               {checkedIds.size === 0 && waitingStudents.length > 1 && (
                 <button
                   onClick={assignAll}
                   disabled={!selectedCohort}
-                  className="text-xs font-bold text-slate-400 disabled:opacity-40"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 text-white text-xs font-bold rounded-xl disabled:opacity-40 active:scale-95 transition-all"
                 >
-                  전체 배정
+                  <UserPlus size={13} /> 전체 배정
                 </button>
               )}
             </div>
