@@ -83,7 +83,10 @@ export default function HomePage() {
     }
 
     setStudent(st);
-    if (!st.department_id) { setNoDept(true); setLoading(false); return; }
+    if (!st.department_id) {
+      router.push('/select-dept');
+      return;
+    }
     setDepartment(st.department);
 
     const { count } = await supabase

@@ -29,7 +29,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 로그인 없이 접근 가능한 경로
-  const publicPaths = ['/login', '/auth/callback'];
+  const publicPaths = ['/login', '/auth/callback', '/select-dept'];
   const isPublic = publicPaths.some(p => pathname.startsWith(p));
 
   if (!user && !isPublic) {
