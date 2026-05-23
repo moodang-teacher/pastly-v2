@@ -56,10 +56,14 @@ export default function LoginPage() {
 
   async function handleGoogle() {
     setLoading(true);
+    const redirectTo = process.env.NODE_ENV === 'development'
+      ? `${window.location.origin}/auth/callback`
+      : `https://pastly-v2.vercel.app/auth/callback`;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo,
         queryParams: { prompt: 'select_account' },
       },
     });
