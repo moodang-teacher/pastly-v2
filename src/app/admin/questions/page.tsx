@@ -234,13 +234,25 @@ export default function QuestionsPage() {
   }
 
   async function toggleActive(q: Question) {
-    await supabase.from('questions').update({ is_active: !q.is_active }).eq('id', q.id);
+    const { error } = await supabase
+      .from('questions')
+      .update({ is_active: !q.is_active })
+      .eq('id', q.id);
+
+    if (error) {
+      alert(`변경 실패: ${error.message}\n\ncode: ${error.code}`);
+      return;
+    }
     setQuestions(prev => prev.map(x => x.id === q.id ? { ...x, is_active: !x.is_active } : x));
   }
 
   async function deleteQuestion(id: string) {
     if (!confirm('이 문제를 삭제하시겠습니까?')) return;
-    await supabase.from('questions').delete().eq('id', id);
+    const { error } = await supabase.from('questions').delete().eq('id', id);
+    if (error) {
+      alert(`삭제 실패: ${error.message}`);
+      return;
+    }
     setQuestions(prev => prev.filter(x => x.id !== id));
   }
 
