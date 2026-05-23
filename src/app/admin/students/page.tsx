@@ -3,85 +3,114 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { getLevelLabel } from '@/types';
-import { UserPlus, Trash2, Search } from 'lucide-react';
+import { UserPlus, Trash2, Search, RefreshCw } from 'lucide-react';
 
 export default function StudentsPage() {
   const supabase = createClient();
   const [teacher, setTeacher] = useState<any>(null);
   const [cohorts, setCohorts] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
-  const [allUsers, setAllUsers] = useState<any[]>([]); // 배정 안된 학생들
+  const [myStudents, setMyStudents] = useState<any[]>([]);   // 내 전공 + 기수 배정된 학생
+  const [waitingStudents, setWaitingStudents] = useState<any[]>([]); // 내 전공 + 기수 미배정
   const [search, setSearch] = useState('');
   const [selectedCohort, setSelectedCohort] = useState('');
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
 
+  async function loadAll(teacherData?: any) {
+    const t = teacherData || teacher;
+    if (!t) return;
+
+    // 내 전공 활성 기수
+    const { data: ch } = await supabase
+      .from('cohorts')
+      .select('*')
+      .eq('teacher_id', t.id)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+    setCohorts(ch || []);
+    if (ch && ch.length > 0 && !selectedCohort) setSelectedCohort(ch[0].id);
+
+    // 내 전공인데 기수 미배정 학생 (신규 가입자)
+    const { data: waiting } = await supabase
+      .from('students')
+      .select('*')
+      .eq('department_id', t.department_id)
+      .is('cohort_id', null)
+      .order('created_at', { ascending: false });
+    setWaitingStudents(waiting || []);
+
+    // 내 전공 + 기수 배정된 학생
+    const { data: assigned } = await supabase
+      .from('students')
+      .select('*, cohort:cohorts(name)')
+      .eq('department_id', t.department_id)
+      .not('cohort_id', 'is', null)
+      .order('name');
+    setMyStudents(assigned || []);
+  }
+
   useEffect(() => {
-    async function load() {
+    async function init() {
       const { data: { user } } = await supabase.auth.getUser();
       const { data: t } = await supabase
-        .from('teachers').select('*, department:departments(*)')
-        .eq('user_id', user!.id).single();
+        .from('teachers')
+        .select('*, department:departments(*)')
+        .eq('user_id', user!.id)
+        .single();
       setTeacher(t);
-
-      // 내 전공 활성 기수
-      const { data: ch } = await supabase
-        .from('cohorts')
-        .select('*')
-        .eq('teacher_id', t.id)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-      setCohorts(ch || []);
-      if (ch && ch.length > 0) setSelectedCohort(ch[0].id);
-
-      // 내 전공 배정된 학생
-      const { data: st } = await supabase
-        .from('students')
-        .select('*')
-        .eq('department_id', t.department_id)
-        .order('name');
-      setStudents(st || []);
-
-      // 아직 전공 배정 안된 학생
-      const { data: unassigned } = await supabase
-        .from('students')
-        .select('*')
-        .is('department_id', null)
-        .order('created_at', { ascending: false });
-      setAllUsers(unassigned || []);
-
+      await loadAll(t);
       setLoading(false);
     }
-    load();
+    init();
   }, []);
 
-  async function assignStudent(studentId: string) {
-    if (!selectedCohort || !teacher) return;
-    const { error } = await supabase.from('students').update({
-      department_id: teacher.department_id,
-      cohort_id: selectedCohort,
-    }).eq('id', studentId);
+  async function assignCohort(studentId: string) {
+    if (!selectedCohort) return;
+    const { error } = await supabase
+      .from('students')
+      .update({ cohort_id: selectedCohort })
+      .eq('id', studentId);
 
     if (!error) {
-      setMsg('✅ 학생이 배정되었습니다.');
-      // 목록 갱신
-      const { data: st } = await supabase.from('students').select('*').eq('department_id', teacher.department_id).order('name');
-      setStudents(st || []);
-      const { data: unassigned } = await supabase.from('students').select('*').is('department_id', null).order('created_at', { ascending: false });
-      setAllUsers(unassigned || []);
-      setTimeout(() => setMsg(''), 3000);
+      showMsg('✅ 기수가 배정되었습니다.');
+      await loadAll();
     }
+  }
+
+  async function assignAll() {
+    if (!selectedCohort || waitingStudents.length === 0) return;
+    if (!confirm(`${waitingStudents.length}명 전체를 선택한 기수에 배정하시겠습니까?`)) return;
+
+    const ids = waitingStudents.map(s => s.id);
+    const { error } = await supabase
+      .from('students')
+      .update({ cohort_id: selectedCohort })
+      .in('id', ids);
+
+    if (!error) {
+      showMsg(`✅ ${ids.length}명 전체 배정 완료`);
+      await loadAll();
+    }
+  }
+
+  async function changeDept(studentId: string, newDeptId: string) {
+    await supabase.from('students').update({ department_id: newDeptId, cohort_id: null }).eq('id', studentId);
+    showMsg('✅ 전공이 변경되었습니다.');
+    await loadAll();
   }
 
   async function removeStudent(studentId: string) {
-    if (!confirm('이 학생의 전공 배정을 해제하시겠습니까?')) return;
-    await supabase.from('students').update({ department_id: null, cohort_id: null }).eq('id', studentId);
-    setStudents(prev => prev.filter(s => s.id !== studentId));
-    const { data: unassigned } = await supabase.from('students').select('*').is('department_id', null);
-    setAllUsers(unassigned || []);
+    if (!confirm('이 학생의 기수 배정을 해제하시겠습니까?')) return;
+    await supabase.from('students').update({ cohort_id: null }).eq('id', studentId);
+    await loadAll();
   }
 
-  const filteredStudents = students.filter(s =>
+  function showMsg(text: string) {
+    setMsg(text);
+    setTimeout(() => setMsg(''), 3000);
+  }
+
+  const filteredStudents = myStudents.filter(s =>
     s.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -93,17 +122,35 @@ export default function StudentsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h1 className="text-2xl font-black text-slate-900 dark:text-white">학생 관리</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-black text-slate-900 dark:text-white">학생 관리</h1>
+        <button onClick={() => loadAll()} className="p-2 text-slate-400 hover:text-brand-500 transition-colors">
+          <RefreshCw size={18} />
+        </button>
+      </div>
 
-      {msg && <p className="text-center text-sm font-bold text-emerald-600 bg-emerald-50 py-2.5 rounded-2xl">{msg}</p>}
+      {msg && <p className="text-center text-sm font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 py-2.5 rounded-2xl">{msg}</p>}
 
-      {/* 배정 안된 학생 목록 */}
-      {allUsers.length > 0 && (
+      {/* 기수 미배정 학생 (내 전공으로 가입한 신규) */}
+      {waitingStudents.length > 0 && (
         <div className="card p-5">
-          <h2 className="font-black text-slate-800 dark:text-white mb-1">
-            신규 가입자 ({allUsers.length}명)
-          </h2>
-          <p className="text-xs text-slate-400 mb-4">전공이 아직 배정되지 않은 학생입니다</p>
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="font-black text-slate-800 dark:text-white">
+              기수 배정 대기 ({waitingStudents.length}명)
+            </h2>
+            {waitingStudents.length > 1 && (
+              <button
+                onClick={assignAll}
+                disabled={!selectedCohort}
+                className="text-xs font-bold text-brand-600 dark:text-brand-400 disabled:opacity-40"
+              >
+                전체 배정
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-slate-400 mb-4">
+            {teacher?.department?.name} 전공으로 가입한 학생입니다
+          </p>
 
           {cohorts.length === 0 ? (
             <div className="bg-amber-50 dark:bg-amber-950 p-3 rounded-xl text-xs text-amber-700 dark:text-amber-300 font-semibold mb-3">
@@ -120,14 +167,14 @@ export default function StudentsPage() {
           )}
 
           <div className="space-y-2">
-            {allUsers.map(u => (
-              <div key={u.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+            {waitingStudents.map(s => (
+              <div key={s.id} className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-800">
                 <div>
-                  <p className="font-bold text-sm dark:text-white">{u.name}</p>
-                  <p className="text-xs text-slate-400">{new Date(u.created_at).toLocaleDateString('ko-KR')} 가입</p>
+                  <p className="font-bold text-sm dark:text-white">{s.name}</p>
+                  <p className="text-xs text-slate-400">{new Date(s.created_at).toLocaleDateString('ko-KR')} 가입</p>
                 </div>
                 <button
-                  onClick={() => assignStudent(u.id)}
+                  onClick={() => assignCohort(s.id)}
                   disabled={!selectedCohort}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 text-white text-xs font-bold rounded-xl disabled:opacity-40 active:scale-95 transition-all"
                 >
@@ -139,11 +186,11 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {/* 내 반 학생 목록 */}
+      {/* 배정된 학생 목록 */}
       <div className="card p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-black text-slate-800 dark:text-white">
-            {teacher?.department?.name} 학생 ({students.length}명)
+            {teacher?.department?.name} 학생 ({myStudents.length}명)
           </h2>
         </div>
 
@@ -158,22 +205,25 @@ export default function StudentsPage() {
         </div>
 
         {filteredStudents.length === 0 ? (
-          <p className="text-center text-slate-400 py-8 text-sm">학생이 없습니다</p>
+          <p className="text-center text-slate-400 py-8 text-sm">
+            {myStudents.length === 0 ? '배정된 학생이 없습니다' : '검색 결과가 없습니다'}
+          </p>
         ) : (
           <div className="space-y-2">
             {filteredStudents.map(s => (
               <div key={s.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
                 <div>
                   <p className="font-bold text-sm dark:text-white">{s.name}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     <span className="text-xs text-brand-400 font-medium">{getLevelLabel(s.total_attempts)}</span>
                     <span className="text-xs text-slate-400">최고 {s.high_score}점</span>
-                    <span className="text-xs text-slate-400">총 {s.total_attempts}문제</span>
+                    <span className="text-xs text-slate-400">{s.total_attempts}문제</span>
+                    {s.cohort && <span className="text-xs bg-slate-200 dark:bg-slate-700 text-slate-500 px-1.5 py-0.5 rounded-lg">{s.cohort.name}</span>}
                   </div>
                 </div>
                 <button
                   onClick={() => removeStudent(s.id)}
-                  className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
+                  className="p-2 text-slate-400 hover:text-rose-500 transition-colors flex-none"
                 >
                   <Trash2 size={15} />
                 </button>

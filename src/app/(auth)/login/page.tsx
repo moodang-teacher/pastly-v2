@@ -1,9 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
+
+interface Department {
+  id: string;
+  name: string;
+  slug: string;
+  parent_id: string | null;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,9 +20,27 @@ export default function LoginPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [deptId, setDeptId] = useState('');
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // 전공 목록 로드 (미용 부모 제외, 실제 선택 가능한 전공만)
+  useEffect(() => {
+    async function loadDepts() {
+      const { data } = await supabase
+        .from('departments')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      // 미용(부모) 제외 - slug가 'beauty'인 것만 제외
+      const filtered = (data || []).filter((d: Department) => d.slug !== 'beauty');
+      setDepartments(filtered);
+      if (filtered.length > 0) setDeptId(filtered[0].id);
+    }
+    loadDepts();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,21 +55,23 @@ export default function LoginPage() {
         router.refresh();
       } else {
         if (!name.trim()) throw new Error('이름을 입력해주세요.');
+        if (!deptId) throw new Error('전공을 선택해주세요.');
         if (password.length < 6) throw new Error('비밀번호는 6자 이상이어야 합니다.');
 
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw new Error(error.message);
         if (!data.user) throw new Error('회원가입 중 오류가 발생했습니다.');
 
-        // 학생 프로필 생성 (전공 배정은 선생님이 나중에)
+        // 학생 프로필 생성 (전공 포함, 기수는 선생님이 배정)
         await supabase.from('students').insert({
           user_id: data.user.id,
           name: name.trim(),
+          department_id: deptId,
           total_attempts: 0,
           high_score: 0,
         });
 
-        alert('회원가입이 완료되었습니다! 선생님께 전공 배정을 요청하세요.');
+        alert('회원가입이 완료되었습니다!\n선생님께 기수 배정을 요청하세요.');
         setTab('login');
       }
     } catch (err: any) {
@@ -78,11 +105,12 @@ export default function LoginPage() {
       <div className="w-full max-w-sm animate-slide-up">
         {/* 로고 */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-600 rounded-3xl mb-4 shadow-xl shadow-brand-500/30">
-            <span className="text-3xl">📝</span>
-          </div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">Pastly</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 font-medium">필기시험 마스터</p>
+          <img
+            src="https://moodang-teacher.github.io/pastly/images/pastly_logo.png"
+            alt="Pastly"
+            className="h-10 w-auto object-contain mx-auto mb-3"
+          />
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">필기시험 마스터</p>
         </div>
 
         {/* 탭 */}
@@ -105,14 +133,34 @@ export default function LoginPage() {
         {/* 폼 */}
         <form onSubmit={handleSubmit} className="space-y-3">
           {tab === 'signup' && (
-            <input
-              className="input-field"
-              placeholder="이름"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              required
-            />
+            <>
+              <input
+                className="input-field"
+                placeholder="이름 (실명)"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                required
+              />
+              {/* 전공 선택 */}
+              <div>
+                <label className="text-xs font-bold text-slate-500 mb-1.5 block px-1">
+                  전공 선택
+                </label>
+                <select
+                  value={deptId}
+                  onChange={e => setDeptId(e.target.value)}
+                  className="input-field"
+                  required
+                >
+                  <option value="">전공을 선택하세요</option>
+                  {departments.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+            </>
           )}
+
           <input
             className="input-field"
             type="email"
