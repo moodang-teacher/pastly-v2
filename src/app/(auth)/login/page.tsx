@@ -37,7 +37,8 @@ export default function LoginPage() {
       // 미용(부모) 제외 - slug가 'beauty'인 것만 제외
       const filtered = (data || []).filter((d: Department) => d.slug !== 'beauty');
       setDepartments(filtered);
-      if (filtered.length > 0) setDeptId(filtered[0].id);
+      // 기본값을 빈 값으로 - 반드시 선택하게
+      setDeptId('');
     }
     loadDepts();
   }, []);
@@ -55,8 +56,14 @@ export default function LoginPage() {
         router.refresh();
       } else {
         if (!name.trim()) throw new Error('이름을 입력해주세요.');
-        if (!deptId) throw new Error('전공을 선택해주세요.');
+        if (!deptId) throw new Error('전공을 선택해주세요. 전공을 선택하지 않으면 시험을 볼 수 없습니다!');
         if (password.length < 6) throw new Error('비밀번호는 6자 이상이어야 합니다.');
+
+        const selectedDeptName = departments.find(d => d.id === deptId)?.name;
+        if (!confirm(`전공: ${selectedDeptName}\n\n이 전공으로 가입하시겠습니까?\n가입 후 전공 변경은 선생님을 통해서만 가능합니다.`)) {
+          setLoading(false);
+          return;
+        }
 
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw new Error(error.message);
@@ -144,19 +151,29 @@ export default function LoginPage() {
               {/* 전공 선택 */}
               <div>
                 <label className="text-xs font-bold text-slate-500 mb-1.5 block px-1">
-                  전공 선택
+                  전공 선택 <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={deptId}
                   onChange={e => setDeptId(e.target.value)}
-                  className="input-field"
+                  className={`input-field ${!deptId ? 'border-2 border-rose-400 dark:border-rose-500 bg-rose-50 dark:bg-rose-950/30' : 'border-2 border-emerald-400'}`}
                   required
                 >
-                  <option value="">전공을 선택하세요</option>
+                  <option value="">⚠️ 반드시 전공을 선택하세요</option>
                   {departments.map(d => (
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
                 </select>
+                {!deptId && (
+                  <p className="text-rose-500 text-xs font-bold mt-1.5 px-1">
+                    전공을 선택하지 않으면 시험을 볼 수 없습니다!
+                  </p>
+                )}
+                {deptId && (
+                  <p className="text-emerald-500 text-xs font-bold mt-1.5 px-1">
+                    ✓ {departments.find(d => d.id === deptId)?.name} 선택됨
+                  </p>
+                )}
               </div>
             </>
           )}
