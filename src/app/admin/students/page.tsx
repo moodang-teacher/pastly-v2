@@ -15,6 +15,8 @@ export default function StudentsPage() {
   const [selectedCohort, setSelectedCohort] = useState('');
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
+  const [allDepts, setAllDepts] = useState<any[]>([]);
+  const [changingDeptId, setChangingDeptId] = useState<string | null>(null); // 전공 변경 중인 학생 id
 
   async function loadAll(teacherData?: any) {
     const t = teacherData || teacher;
@@ -58,6 +60,16 @@ export default function StudentsPage() {
         .eq('user_id', user!.id)
         .single();
       setTeacher(t);
+
+      // 전공 변경용 전체 전공 목록
+      const { data: depts } = await supabase
+        .from('departments')
+        .select('*')
+        .eq('is_active', true)
+        .neq('slug', 'beauty')
+        .order('name');
+      setAllDepts(depts || []);
+
       await loadAll(t);
       setLoading(false);
     }
@@ -94,8 +106,12 @@ export default function StudentsPage() {
   }
 
   async function changeDept(studentId: string, newDeptId: string) {
-    await supabase.from('students').update({ department_id: newDeptId, cohort_id: null }).eq('id', studentId);
-    showMsg('✅ 전공이 변경되었습니다.');
+    if (!newDeptId) return;
+    await supabase.from('students')
+      .update({ department_id: newDeptId, cohort_id: null })
+      .eq('id', studentId);
+    setChangingDeptId(null);
+    showMsg('✅ 전공이 변경되었습니다. 해당 선생님 화면에 나타납니다.');
     await loadAll();
   }
 
@@ -168,18 +184,43 @@ export default function StudentsPage() {
 
           <div className="space-y-2">
             {waitingStudents.map(s => (
-              <div key={s.id} className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-800">
-                <div>
-                  <p className="font-bold text-sm dark:text-white">{s.name}</p>
-                  <p className="text-xs text-slate-400">{new Date(s.created_at).toLocaleDateString('ko-KR')} 가입</p>
+              <div key={s.id} className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-800">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-sm dark:text-white">{s.name}</p>
+                    <p className="text-xs text-slate-400">{new Date(s.created_at).toLocaleDateString('ko-KR')} 가입</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setChangingDeptId(changingDeptId === s.id ? null : s.id)}
+                      className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-xl active:scale-95 transition-all"
+                    >
+                      전공변경
+                    </button>
+                    <button
+                      onClick={() => assignCohort(s.id)}
+                      disabled={!selectedCohort}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 text-white text-xs font-bold rounded-xl disabled:opacity-40 active:scale-95 transition-all"
+                    >
+                      <UserPlus size={13} /> 배정
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => assignCohort(s.id)}
-                  disabled={!selectedCohort}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 text-white text-xs font-bold rounded-xl disabled:opacity-40 active:scale-95 transition-all"
-                >
-                  <UserPlus size={13} /> 배정
-                </button>
+                {/* 전공 변경 인라인 UI */}
+                {changingDeptId === s.id && (
+                  <div className="mt-2 flex gap-2">
+                    <select
+                      className="input-field py-2 text-xs flex-1"
+                      defaultValue=""
+                      onChange={e => e.target.value && changeDept(s.id, e.target.value)}
+                    >
+                      <option value="">다른 전공 선택...</option>
+                      {allDepts.filter(d => d.id !== teacher?.department_id).map((d: any) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -211,22 +252,47 @@ export default function StudentsPage() {
         ) : (
           <div className="space-y-2">
             {filteredStudents.map(s => (
-              <div key={s.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                <div>
-                  <p className="font-bold text-sm dark:text-white">{s.name}</p>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span className="text-xs text-brand-400 font-medium">{getLevelLabel(s.total_attempts)}</span>
-                    <span className="text-xs text-slate-400">최고 {s.high_score}점</span>
-                    <span className="text-xs text-slate-400">{s.total_attempts}문제</span>
-                    {s.cohort && <span className="text-xs bg-slate-200 dark:bg-slate-700 text-slate-500 px-1.5 py-0.5 rounded-lg">{s.cohort.name}</span>}
+              <div key={s.id} className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-sm dark:text-white">{s.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-xs text-brand-400 font-medium">{getLevelLabel(s.total_attempts)}</span>
+                      <span className="text-xs text-slate-400">최고 {s.high_score}점</span>
+                      <span className="text-xs text-slate-400">{s.total_attempts}문제</span>
+                      {s.cohort && <span className="text-xs bg-slate-200 dark:bg-slate-700 text-slate-500 px-1.5 py-0.5 rounded-lg">{s.cohort.name}</span>}
+                    </div>
+                  </div>
+                  <div className="flex gap-1 flex-none">
+                    <button
+                      onClick={() => setChangingDeptId(changingDeptId === s.id ? null : s.id)}
+                      className="px-2 py-1.5 text-slate-400 hover:text-brand-500 text-xs font-bold transition-colors"
+                    >
+                      전공
+                    </button>
+                    <button
+                      onClick={() => removeStudent(s.id)}
+                      className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
+                    >
+                      <Trash2 size={15} />
+                    </button>
                   </div>
                 </div>
-                <button
-                  onClick={() => removeStudent(s.id)}
-                  className="p-2 text-slate-400 hover:text-rose-500 transition-colors flex-none"
-                >
-                  <Trash2 size={15} />
-                </button>
+                {/* 전공 변경 인라인 UI */}
+                {changingDeptId === s.id && (
+                  <div className="mt-2">
+                    <select
+                      className="input-field py-2 text-xs w-full"
+                      defaultValue=""
+                      onChange={e => e.target.value && changeDept(s.id, e.target.value)}
+                    >
+                      <option value="">다른 전공으로 변경...</option>
+                      {allDepts.filter(d => d.id !== s.department_id).map((d: any) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             ))}
           </div>
