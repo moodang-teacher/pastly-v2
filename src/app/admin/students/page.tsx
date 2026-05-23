@@ -16,7 +16,8 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
   const [allDepts, setAllDepts] = useState<any[]>([]);
-  const [changingDeptId, setChangingDeptId] = useState<string | null>(null); // 전공 변경 중인 학생 id
+  const [changingDeptId, setChangingDeptId] = useState<string | null>(null);
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set()); // 체크된 대기 학생 ids
 
   async function loadAll(teacherData?: any) {
     const t = teacherData || teacher;
@@ -89,19 +90,49 @@ export default function StudentsPage() {
     }
   }
 
+  async function assignChecked() {
+    if (!selectedCohort || checkedIds.size === 0) return;
+    if (!confirm(`선택한 ${checkedIds.size}명을 배정하시겠습니까?`)) return;
+    const ids = Array.from(checkedIds);
+    const { error } = await supabase
+      .from('students')
+      .update({ cohort_id: selectedCohort })
+      .in('id', ids);
+    if (!error) {
+      setCheckedIds(new Set());
+      showMsg(`✅ ${ids.length}명 배정 완료`);
+      await loadAll();
+    }
+  }
+
   async function assignAll() {
     if (!selectedCohort || waitingStudents.length === 0) return;
     if (!confirm(`${waitingStudents.length}명 전체를 선택한 기수에 배정하시겠습니까?`)) return;
-
     const ids = waitingStudents.map(s => s.id);
     const { error } = await supabase
       .from('students')
       .update({ cohort_id: selectedCohort })
       .in('id', ids);
-
     if (!error) {
+      setCheckedIds(new Set());
       showMsg(`✅ ${ids.length}명 전체 배정 완료`);
       await loadAll();
+    }
+  }
+
+  function toggleCheck(id: string) {
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleCheckAll() {
+    if (checkedIds.size === waitingStudents.length) {
+      setCheckedIds(new Set());
+    } else {
+      setCheckedIds(new Set(waitingStudents.map(s => s.id)));
     }
   }
 
@@ -151,18 +182,38 @@ export default function StudentsPage() {
       {waitingStudents.length > 0 && (
         <div className="card p-5">
           <div className="flex items-center justify-between mb-1">
-            <h2 className="font-black text-slate-800 dark:text-white">
-              기수 배정 대기 ({waitingStudents.length}명)
-            </h2>
-            {waitingStudents.length > 1 && (
-              <button
-                onClick={assignAll}
-                disabled={!selectedCohort}
-                className="text-xs font-bold text-brand-600 dark:text-brand-400 disabled:opacity-40"
-              >
-                전체 배정
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {/* 전체 선택 체크박스 */}
+              <input
+                type="checkbox"
+                checked={waitingStudents.length > 0 && checkedIds.size === waitingStudents.length}
+                onChange={toggleCheckAll}
+                className="w-4 h-4 rounded accent-brand-600 cursor-pointer"
+              />
+              <h2 className="font-black text-slate-800 dark:text-white">
+                기수 배정 대기 ({waitingStudents.length}명)
+              </h2>
+            </div>
+            <div className="flex gap-2">
+              {checkedIds.size > 0 && (
+                <button
+                  onClick={assignChecked}
+                  disabled={!selectedCohort}
+                  className="text-xs font-bold text-brand-600 dark:text-brand-400 disabled:opacity-40"
+                >
+                  선택 {checkedIds.size}명 배정
+                </button>
+              )}
+              {checkedIds.size === 0 && waitingStudents.length > 1 && (
+                <button
+                  onClick={assignAll}
+                  disabled={!selectedCohort}
+                  className="text-xs font-bold text-slate-400 disabled:opacity-40"
+                >
+                  전체 배정
+                </button>
+              )}
+            </div>
           </div>
           <p className="text-xs text-slate-400 mb-4">
             {teacher?.department?.name} 전공으로 가입한 학생입니다
@@ -184,11 +235,23 @@ export default function StudentsPage() {
 
           <div className="space-y-2">
             {waitingStudents.map(s => (
-              <div key={s.id} className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-800">
+              <div key={s.id} className={`p-3 rounded-xl border transition-colors ${
+                checkedIds.has(s.id)
+                  ? 'bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-700'
+                  : 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800'
+              }`}>
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-sm dark:text-white">{s.name}</p>
-                    <p className="text-xs text-slate-400">{new Date(s.created_at).toLocaleDateString('ko-KR')} 가입</p>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={checkedIds.has(s.id)}
+                      onChange={() => toggleCheck(s.id)}
+                      className="w-4 h-4 rounded accent-brand-600 cursor-pointer flex-none"
+                    />
+                    <div>
+                      <p className="font-bold text-sm dark:text-white">{s.name}</p>
+                      <p className="text-xs text-slate-400">{new Date(s.created_at).toLocaleDateString('ko-KR')} 가입</p>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -206,7 +269,6 @@ export default function StudentsPage() {
                     </button>
                   </div>
                 </div>
-                {/* 전공 변경 인라인 UI */}
                 {changingDeptId === s.id && (
                   <div className="mt-2 flex gap-2">
                     <select
