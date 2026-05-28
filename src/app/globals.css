@@ -5,81 +5,94 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --brand: #4f46e5;
-    --brand-light: #e0eaff;
-  }
+	:root {
+		--brand: #4f46e5;
+		--brand-light: #e0eaff;
+	}
 
-  * {
-    font-style: normal !important;
-    -webkit-tap-highlight-color: transparent;
-  }
+	* {
+		font-style: normal !important;
+		-webkit-tap-highlight-color: transparent;
+	}
 
-  body {
-    font-family: 'Pretendard', sans-serif;
-    @apply bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white;
-  }
+	body {
+		font-family: 'Pretendard', sans-serif;
+		@apply bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white;
+	}
 }
 
 /* 슬롯머신 숫자 애니메이션 */
 @keyframes slotUp {
-  0%   { transform: translateY(0); }
-  100% { transform: translateY(calc(-1 * var(--slot-distance))); }
+	0% {
+		transform: translateY(0);
+	}
+	100% {
+		transform: translateY(calc(-1 * var(--slot-distance)));
+	}
 }
 .slot-reel {
-  display: inline-block;
-  overflow: hidden;
-  height: 1em;
-  vertical-align: middle;
-  position: relative;
+	display: inline-block;
+	overflow: hidden;
+	height: 1em;
+	vertical-align: middle;
+	position: relative;
 }
 .slot-digits {
-  display: flex;
-  flex-direction: column;
-  animation: slotUp 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  animation-delay: var(--slot-delay, 0ms);
+	display: flex;
+	flex-direction: column;
+	animation: slotUp 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+	animation-delay: var(--slot-delay, 0ms);
 }
 .slot-digits span {
-  display: block;
-  height: 1em;
-  line-height: 1em;
+	display: block;
+	height: 1em;
+	line-height: 1em;
 }
 
 /* 프로그레스바 */
 @keyframes progressGrow {
-  from { width: 0% !important; }
-  to   { width: var(--target-w) !important; }
+	from {
+		width: 0% !important;
+	}
+	to {
+		width: var(--target-w) !important;
+	}
 }
 .progress-animate {
-  animation: progressGrow 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  animation-delay: var(--progress-delay, 0ms);
+	animation: progressGrow 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+	animation-delay: var(--progress-delay, 0ms);
 }
 
 @layer utilities {
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+	.no-scrollbar::-webkit-scrollbar {
+		display: none;
+	}
+	.no-scrollbar {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
 
-  .glass {
-    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl;
-  }
+	.glass {
+		@apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl;
+	}
 
-  .card {
-    @apply bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm;
-  }
+	.card {
+		@apply bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm;
+	}
 
-  .btn-primary {
-    @apply w-full py-4 bg-brand-600 hover:bg-brand-700 text-white font-black rounded-2xl
+	.btn-primary {
+		@apply w-full py-4 bg-brand-600 hover:bg-brand-700 text-white font-black rounded-2xl
            transition-all active:scale-95 shadow-lg shadow-brand-500/20;
-  }
+	}
 
-  .btn-secondary {
-    @apply w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200
+	.btn-secondary {
+		@apply w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200
            font-bold rounded-2xl transition-all active:scale-95;
-  }
+	}
 
-  .input-field {
-    @apply w-full p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl border-none
+	.input-field {
+		@apply w-full py-4 px-4 bg-slate-100 dark:bg-slate-800 rounded-2xl border-none
            focus:ring-2 focus:ring-brand-500 outline-none transition-all font-semibold
            dark:text-white placeholder:text-slate-400;
-  }
+	}
 }

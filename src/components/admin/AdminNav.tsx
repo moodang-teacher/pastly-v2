@@ -18,7 +18,6 @@ const NAV = [
 	{ href: '/admin/questions', icon: BookOpen, label: '문제 관리' },
 	{ href: '/admin/students', icon: Users, label: '학생 관리' },
 	{ href: '/admin/reset', icon: RotateCcw, label: '초기화' },
-	{ href: '/home?mode=student', icon: GraduationCap, label: '학생 화면' },
 ];
 
 export default function AdminNav({ teacher }: { teacher: any }) {
@@ -46,6 +45,13 @@ export default function AdminNav({ teacher }: { teacher: any }) {
 					<span className="text-sm font-bold text-slate-600 dark:text-slate-300 hidden sm:block">
 						{teacher?.name} 선생님
 					</span>
+					<Link
+						href="/home?mode=student"
+						className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 text-xs font-bold transition-all active:scale-90"
+					>
+						<GraduationCap size={15} />
+						학생 화면
+					</Link>
 					<button
 						onClick={logout}
 						className="p-2 text-slate-400 hover:text-rose-500 transition-colors"

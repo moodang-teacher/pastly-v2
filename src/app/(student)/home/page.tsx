@@ -78,6 +78,7 @@ export default function HomePage() {
 	const [noDept, setNoDept] = useState(false);
 	const [avatarUploading, setAvatarUploading] = useState(false);
 	const [isTeacher, setIsTeacher] = useState(false);
+	const [teacherName, setTeacherName] = useState('');
 
 	const loadData = useCallback(async () => {
 		const {
@@ -88,13 +89,17 @@ export default function HomePage() {
 			return;
 		}
 
-		// 선생님 여부 확인
+		// 선생님 여부 확인 + 이름/전공 가져오기
 		const { data: teacher } = await supabase
 			.from('teachers')
-			.select('id')
+			.select('id, name, department:departments(*)')
 			.eq('user_id', user.id)
 			.single();
 		setIsTeacher(!!teacher);
+		if (teacher) {
+			setTeacherName((teacher as any).name || '');
+			setDepartment((teacher as any).department || null);
+		}
 
 		const { data: st } = await supabase
 			.from('students')
@@ -103,11 +108,22 @@ export default function HomePage() {
 			.single();
 
 		if (!st) {
+			// 선생님이면 학생 레코드 생성 안 함
+			if (teacher) {
+				setLoading(false);
+				return;
+			}
+			// Google 로그인 시 user_metadata에서 이름 가져오기
+			const displayName =
+				user.user_metadata?.full_name ||
+				user.user_metadata?.name ||
+				user.email?.split('@')[0] ||
+				'학생';
 			const { data: newSt } = await supabase
 				.from('students')
 				.insert({
 					user_id: user.id,
-					name: user.email?.split('@')[0] || '학생',
+					name: displayName,
 					total_attempts: 0,
 					high_score: 0,
 				})
@@ -269,10 +285,12 @@ export default function HomePage() {
 
 				<div className="flex-1 min-w-0">
 					<p className="font-black text-lg truncate dark:text-white">
-						{student?.name}
+						{isTeacher ? teacherName : student?.name}
 					</p>
 					<p className="text-xs text-brand-500 font-bold">
-						{getLevelLabel(student?.total_attempts || 0)}
+						{isTeacher
+							? '👩‍🏫 선생님'
+							: getLevelLabel(student?.total_attempts || 0)}
 					</p>
 					{department && (
 						<p className="text-xs text-slate-400 font-medium mt-0.5">
