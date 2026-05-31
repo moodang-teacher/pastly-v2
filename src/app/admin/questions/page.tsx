@@ -72,6 +72,11 @@ export default function QuestionsPage() {
   const [departments, setDepartments] = useState<any[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [activeTab, setActiveTab] = useState<"json" | "single">("json");
+  const [totalCounts, setTotalCounts] = useState<{
+    total: number;
+    common?: number;
+    specialty?: number;
+  } | null>(null);
 
   // JSON 업로드 상태
   const [uploadDept, setUploadDept] = useState("");
@@ -97,6 +102,40 @@ export default function QuestionsPage() {
   const [sSaving, setSSaving] = useState(false);
   const [sSaveResult, setSSaveResult] = useState("");
 
+  async function loadCounts(t?: any) {
+    const td = t || teacher;
+    if (!td) return;
+    const isBeauty = td.department?.slug?.startsWith("beauty-");
+    if (isBeauty) {
+      const [{ count: commonCount }, { count: specialtyCount }] = await Promise.all([
+        supabase
+          .from("questions")
+          .select("*", { count: "exact", head: true })
+          .eq("department_id", td.department.parent_id)
+          .eq("is_common", true)
+          .eq("is_active", true),
+        supabase
+          .from("questions")
+          .select("*", { count: "exact", head: true })
+          .eq("department_id", td.department_id)
+          .eq("is_common", false)
+          .eq("is_active", true),
+      ]);
+      setTotalCounts({
+        total: (commonCount || 0) + (specialtyCount || 0),
+        common: commonCount || 0,
+        specialty: specialtyCount || 0,
+      });
+    } else {
+      const { count } = await supabase
+        .from("questions")
+        .select("*", { count: "exact", head: true })
+        .eq("department_id", td.department_id)
+        .eq("is_active", true);
+      setTotalCounts({ total: count || 0 });
+    }
+  }
+
   useEffect(() => {
     async function load() {
       const {
@@ -108,6 +147,18 @@ export default function QuestionsPage() {
         .eq("user_id", user!.id)
         .single();
       setTeacher(t);
+
+      // 공통 문제가 부모 전공이 아닌 하위 전공에 저장된 경우 자동 수정
+      if (t?.department?.parent_id) {
+        await supabase
+          .from("questions")
+          .update({ department_id: t.department.parent_id })
+          .eq("uploaded_by", t.id)
+          .eq("is_common", true)
+          .neq("department_id", t.department.parent_id);
+      }
+
+      await loadCounts(t);
 
       const { data: depts } = await supabase
         .from("departments")
@@ -167,8 +218,11 @@ export default function QuestionsPage() {
     if (!parsed || !teacher || !uploadDept) return;
     setUploading(true);
     setUploadResult("");
+    const deptId = isCommon
+      ? (teacher.department?.parent_id ?? uploadDept)
+      : uploadDept;
     const rows = parsed.questions.map((q) => ({
-      department_id: uploadDept,
+      department_id: deptId,
       is_common: isCommon,
       exam_type: uploadType,
       category: q.category,
@@ -195,6 +249,7 @@ export default function QuestionsPage() {
         .order("created_at", { ascending: false })
         .limit(50);
       setQuestions(qs || []);
+      await loadCounts();
     }
     setUploading(false);
   }
@@ -249,7 +304,9 @@ export default function QuestionsPage() {
       }
 
       await supabase.from("questions").insert({
-        department_id: sDept,
+        department_id: sIsCommon
+          ? (teacher.department?.parent_id ?? sDept)
+          : sDept,
         is_common: sIsCommon,
         exam_type: sExamType,
         category: sCategory.trim(),
@@ -280,6 +337,7 @@ export default function QuestionsPage() {
         .order("created_at", { ascending: false })
         .limit(50);
       setQuestions(qs || []);
+      await loadCounts();
     } catch (err: any) {
       setSSaveResult(`❌ ${err.message}`);
     }
@@ -703,6 +761,40 @@ export default function QuestionsPage() {
           >
             {sSaving ? "저장 중..." : "문제 등록"}
           </button>
+        </div>
+      )}
+
+      {/* 등록된 전체 문제 수 */}
+      {totalCounts !== null && (
+        <div className="card p-5">
+          <h2 className="font-black text-slate-800 dark:text-white mb-3">
+            등록된 전체 문제
+          </h2>
+          {teacher?.department?.slug?.startsWith("beauty-") ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-center">
+                <div className="text-2xl font-black text-brand-600 dark:text-brand-400">
+                  {totalCounts.common}
+                </div>
+                <div className="text-xs text-slate-400 mt-1">미용 공통</div>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-center">
+                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                  {totalCounts.specialty}
+                </div>
+                <div className="text-xs text-slate-400 mt-1">
+                  전공({teacher.department.name.replace("미용-", "")})
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-center">
+              <div className="text-2xl font-black text-brand-600 dark:text-brand-400">
+                {totalCounts.total}
+              </div>
+              <div className="text-xs text-slate-400 mt-1">전체 문제</div>
+            </div>
+          )}
         </div>
       )}
 
