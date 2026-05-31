@@ -95,7 +95,7 @@ export default function SelectDeptPage() {
         {/* 헤더 */}
         <div className="text-center mb-8">
           <img
-            src="https://moodang-teacher.github.io/pastly/images/pastly_logo.png"
+            src="/icons/pastly.svg"
             alt="Pastly"
             className="h-10 w-auto object-contain mx-auto mb-4"
           />

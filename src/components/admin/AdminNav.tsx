@@ -46,9 +46,7 @@ export default function AdminNav({ teacher }: { teacher: any }) {
 			<ChangePasswordModal isOpen={showPwModal} onClose={() => setShowPwModal(false)} />
 			<div className="max-w-2xl mx-auto px-5 py-3 flex items-center justify-between">
 				<div className="flex items-center gap-3">
-					<span className="text-lg font-black text-brand-600 dark:text-brand-400">
-						Pastly
-					</span>
+					<img src="/icons/pastly.svg" alt="Pastly" className="h-7 w-auto object-contain" />
 					<span className="text-xs bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 px-2 py-0.5 rounded-lg font-bold">
 						관리자
 					</span>

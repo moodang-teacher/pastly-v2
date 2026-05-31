@@ -127,7 +127,7 @@ export default function LoginPage() {
 				{/* 로고 */}
 				<div className="text-center mb-10">
 					<img
-						src="https://moodang-teacher.github.io/pastly/images/pastly_logo.png"
+						src="/icons/pastly.svg"
 						alt="Pastly"
 						className="h-10 w-auto object-contain mx-auto mb-3"
 					/>

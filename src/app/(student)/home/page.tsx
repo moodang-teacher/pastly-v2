@@ -223,7 +223,7 @@ export default function HomePage() {
 			{/* 헤더 */}
 			<header className="flex justify-between items-center mb-6">
 				<img
-					src="https://moodang-teacher.github.io/pastly/images/pastly_logo.png"
+					src="/icons/pastly.svg"
 					alt="Pastly"
 					className="h-7 w-auto object-contain"
 				/>
