@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getLevelLabel } from "@/types";
 import { UserPlus, Trash2, Search, RefreshCw } from "lucide-react";
+import LoadingScreen from "@/components/LoadingScreen";
 
 export default function StudentsPage() {
   const supabase = createClient();
@@ -174,9 +175,7 @@ export default function StudentsPage() {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
-      </div>
+      <LoadingScreen />
     );
 
   return (

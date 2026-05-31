@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { Question, Student } from '@/types';
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import LoadingScreen from '@/components/LoadingScreen';
 
 // ── 슬롯머신 숫자 컴포넌트 ──────────────────────────────────
 function SlotDigit({ digit, delay }: { digit: string; delay: number }) {
@@ -627,11 +628,7 @@ function QuizContent() {
 export default function QuizPage() {
 	return (
 		<Suspense
-			fallback={
-				<div className="min-h-screen flex items-center justify-center">
-					<div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
-				</div>
-			}
+			fallback={<LoadingScreen />}
 		>
 			<QuizContent />
 		</Suspense>

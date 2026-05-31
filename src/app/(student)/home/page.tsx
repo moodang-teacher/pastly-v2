@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import ChangePasswordModal from '@/components/ChangePasswordModal';
+import LoadingScreen from '@/components/LoadingScreen';
 
 interface RankEntry {
 	name: string;
@@ -209,13 +210,7 @@ export default function HomePage() {
 		}
 	}
 
-	if (loading) {
-		return (
-			<div className="min-h-screen flex items-center justify-center">
-				<div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
-			</div>
-		);
-	}
+	if (loading) return <LoadingScreen />;
 
 	return (
 		<div className="max-w-md mx-auto min-h-screen flex flex-col p-5 pb-8">

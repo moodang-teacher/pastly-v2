@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Question, UploadPayload } from "@/types";
+import LoadingScreen from "@/components/LoadingScreen";
 import {
   Upload,
   Trash2,

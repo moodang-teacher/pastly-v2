@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Plus, Archive } from 'lucide-react';
+import LoadingScreen from '@/components/LoadingScreen';
 
 export default function CohortsPage() {
   const supabase = createClient();
@@ -53,11 +54,7 @@ export default function CohortsPage() {
     setCohorts(prev => prev.map(c => c.id === id ? { ...c, is_active: false } : c));
   }
 
-  if (loading) return (
-    <div className="flex items-center justify-center py-20">
-      <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
+  if (loading) return <LoadingScreen />;
 
   const active = cohorts.filter(c => c.is_active);
   const archived = cohorts.filter(c => !c.is_active);

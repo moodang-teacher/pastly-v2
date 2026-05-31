@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import LoadingScreen from '@/components/LoadingScreen';
 
 interface Department {
   id: string;
@@ -80,9 +81,7 @@ export default function SelectDeptPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
-      </div>
+      <LoadingScreen />
     );
   }
 
