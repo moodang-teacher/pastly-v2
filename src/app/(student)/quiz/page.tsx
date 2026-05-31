@@ -216,6 +216,15 @@ function ResultScreen({
 											<p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed pt-2">
 												{q.question_text}
 											</p>
+											{q.image_url && (
+												<figure className="rounded-xl overflow-hidden border-2 border-slate-100 dark:border-slate-800">
+													<img
+														src={q.image_url}
+														alt="문제 이미지"
+														className="w-full h-auto"
+													/>
+												</figure>
+											)}
 											<div
 												className={`flex items-start gap-2 px-3 py-2 rounded-xl text-xs ${
 													isCorrect
