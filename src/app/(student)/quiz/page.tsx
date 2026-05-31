@@ -283,6 +283,7 @@ function QuizContent() {
 	const [timeLeft, setTimeLeft] = useState(60);
 	const [phase, setPhase] = useState<'loading' | 'quiz' | 'result'>('loading');
 	const [feedbackOpen, setFeedbackOpen] = useState(false);
+	const [feedbackCollapsed, setFeedbackCollapsed] = useState(false);
 	const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
 	const q = questions[currentIdx];
@@ -368,6 +369,7 @@ function QuizContent() {
 		setSelected(idx);
 		setAnswered(true);
 		setFeedbackOpen(true);
+		setFeedbackCollapsed(false);
 
 		const newAnswers = [...answers];
 		newAnswers[currentIdx] = idx;
@@ -552,26 +554,59 @@ function QuizContent() {
 				<div className="fixed inset-x-0 bottom-0 z-50 animate-slide-up">
 					<div className="max-w-md mx-auto px-4 pb-4">
 						<div
-							className={`rounded-3xl p-6 shadow-2xl space-y-4 ${isCorrect ? 'bg-emerald-600' : 'bg-rose-600'}`}
+							className={`rounded-3xl shadow-2xl ${isCorrect ? 'bg-emerald-600' : 'bg-rose-600'}`}
 						>
-							<p className="text-base font-black text-yellow-300">
-								{isCorrect
-									? '정답입니다! ✅'
-									: `오답! 정답은 ${q.answer_index + 1}번입니다. ❌`}
-							</p>
-							{q.explanation && (
-								<p className="text-sm text-white/90 leading-relaxed">
-									{q.explanation}
+							{/* 헤더 (항상 표시) */}
+							<div className="flex items-center justify-between px-6 py-4">
+								<p className="text-base font-black text-yellow-300">
+									{isCorrect
+										? '정답입니다! ✅'
+										: `오답! 정답은 ${q.answer_index + 1}번입니다. ❌`}
 								</p>
+								<button
+									onClick={() => setFeedbackCollapsed((v: boolean) => !v)}
+									className="ml-3 p-1 rounded-full bg-white/20 active:bg-white/30"
+								>
+									{feedbackCollapsed ? (
+										<ChevronUp size={18} className="text-white" />
+									) : (
+										<ChevronDown size={18} className="text-white" />
+									)}
+								</button>
+							</div>
+
+							{/* 접히는 영역 */}
+							{!feedbackCollapsed && (
+								<div className="px-6 pb-6 space-y-4">
+									{q.explanation && (
+										<p className="text-sm text-white/90 leading-relaxed">
+											{q.explanation}
+										</p>
+									)}
+									<button
+										onClick={handleNext}
+										className={`w-full py-4 bg-white font-black rounded-2xl text-base shadow-md ${
+											isCorrect ? 'text-emerald-600' : 'text-rose-600'
+										}`}
+									>
+										{currentIdx + 1 >= questions.length ? '결과 보기' : '다음 문제'}
+									</button>
+								</div>
 							)}
-							<button
-								onClick={handleNext}
-								className={`w-full py-4 bg-white font-black rounded-2xl text-base shadow-md ${
-									isCorrect ? 'text-emerald-600' : 'text-rose-600'
-								}`}
-							>
-								{currentIdx + 1 >= questions.length ? '결과 보기' : '다음 문제'}
-							</button>
+
+							{/* 접혔을 때 다음 문제 버튼 */}
+							{feedbackCollapsed && (
+								<div className="px-6 pb-4">
+									<button
+										onClick={handleNext}
+										className={`w-full py-3 bg-white font-black rounded-2xl text-sm shadow-md ${
+											isCorrect ? 'text-emerald-600' : 'text-rose-600'
+										}`}
+									>
+										{currentIdx + 1 >= questions.length ? '결과 보기' : '다음 문제'}
+									</button>
+								</div>
+							)}
 						</div>
 					</div>
 				</div>
