@@ -107,11 +107,12 @@ export default function QuestionsPage() {
     if (!td) return;
     const isBeauty = td.department?.slug?.startsWith("beauty-");
     if (isBeauty) {
+      const deptIds = [td.department_id, td.department.parent_id].filter(Boolean);
       const [{ count: commonCount }, { count: specialtyCount }] = await Promise.all([
         supabase
           .from("questions")
           .select("*", { count: "exact", head: true })
-          .eq("department_id", td.department.parent_id)
+          .in("department_id", deptIds)
           .eq("is_common", true)
           .eq("is_active", true),
         supabase
