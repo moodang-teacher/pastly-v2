@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { Question, Student } from '@/types';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 
 // ── 슬롯머신 숫자 컴포넌트 ──────────────────────────────────
 function SlotDigit({ digit, delay }: { digit: string; delay: number }) {
@@ -95,6 +95,17 @@ function ResultScreen({
 	onHome: () => void;
 }) {
 	const pass = score >= 60;
+	const [reviewOpen, setReviewOpen] = useState(false);
+	const [openItems, setOpenItems] = useState<Set<number>>(new Set());
+
+	const toggleItem = (idx: number) => {
+		setOpenItems((prev: Set<number>) => {
+			const next = new Set(prev);
+			if (next.has(idx)) next.delete(idx);
+			else next.add(idx);
+			return next;
+		});
+	};
 
 	const subStats: Record<string, { total: number; correct: number }> = {};
 	questions.forEach((q, i) => {
@@ -149,6 +160,102 @@ function ResultScreen({
 						</div>
 					);
 				})}
+			</div>
+
+			{/* 답안 확인 접기/펼치기 */}
+			<div className="w-full max-w-xs mb-6">
+				<button
+					onClick={() => setReviewOpen((v: boolean) => !v)}
+					className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-sm"
+				>
+					<span>답안 확인 ({questions.length}문제)</span>
+					{reviewOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+				</button>
+
+				{reviewOpen && (
+					<div className="mt-2 space-y-2">
+						{questions.map((q, i) => {
+							const isCorrect = answers[i] === q.answer_index;
+							const isOpen = openItems.has(i);
+							const myAnswer = answers[i];
+
+							return (
+								<div
+									key={i}
+									className={`rounded-2xl border-2 overflow-hidden ${
+										isCorrect
+											? 'border-emerald-200 dark:border-emerald-800'
+											: 'border-rose-200 dark:border-rose-800'
+									}`}
+								>
+									<button
+										onClick={() => toggleItem(i)}
+										className="w-full flex items-center gap-3 px-4 py-3 text-left"
+									>
+										<span
+											className={`flex-none w-7 h-7 rounded-full text-xs font-black flex items-center justify-center ${
+												isCorrect
+													? 'bg-emerald-500 text-white'
+													: 'bg-rose-500 text-white'
+											}`}
+										>
+											{i + 1}
+										</span>
+										<span className="flex-1 text-xs font-semibold text-slate-700 dark:text-slate-300 line-clamp-1">
+											{q.question_text}
+										</span>
+										{isOpen ? (
+											<ChevronUp size={14} className="flex-none text-slate-400" />
+										) : (
+											<ChevronDown size={14} className="flex-none text-slate-400" />
+										)}
+									</button>
+
+									{isOpen && (
+										<div className="px-4 pb-4 pt-1 space-y-2 border-t border-slate-100 dark:border-slate-700">
+											<p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed pt-2">
+												{q.question_text}
+											</p>
+											<div
+												className={`flex items-start gap-2 px-3 py-2 rounded-xl text-xs ${
+													isCorrect
+														? 'bg-emerald-50 dark:bg-emerald-900/30'
+														: 'bg-rose-50 dark:bg-rose-900/30'
+												}`}
+											>
+												<span className="font-bold text-slate-500 shrink-0">
+													내 답
+												</span>
+												<span
+													className={`font-bold ${isCorrect ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}
+												>
+													{myAnswer === -1
+														? '미응답'
+														: `${myAnswer + 1}번. ${q.options[myAnswer]}`}
+												</span>
+											</div>
+											{!isCorrect && (
+												<div className="flex items-start gap-2 px-3 py-2 rounded-xl text-xs bg-emerald-50 dark:bg-emerald-900/30">
+													<span className="font-bold text-slate-500 shrink-0">
+														정답
+													</span>
+													<span className="font-bold text-emerald-600 dark:text-emerald-400">
+														{q.answer_index + 1}번. {q.options[q.answer_index]}
+													</span>
+												</div>
+											)}
+											{q.explanation && (
+												<p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed px-1">
+													{q.explanation}
+												</p>
+											)}
+										</div>
+									)}
+								</div>
+							);
+						})}
+					</div>
+				)}
 			</div>
 
 			<button onClick={onHome} className="btn-primary max-w-xs w-full">
