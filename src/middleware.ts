@@ -1,6 +1,9 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+const ROLE_COOKIE = 'pastly-role';
+const ROLE_MAX_AGE = 60 * 60 * 24; // 24시간
+
 export async function middleware(request: NextRequest) {
 	let supabaseResponse = NextResponse.next({ request });
 
@@ -38,34 +41,44 @@ export async function middleware(request: NextRequest) {
 	}
 
 	if (user && pathname === '/login') {
-		return NextResponse.redirect(new URL('/home', request.url));
+		// 로그아웃 시 role 쿠키 초기화
+		const res = NextResponse.redirect(new URL('/home', request.url));
+		res.cookies.delete(ROLE_COOKIE);
+		return res;
 	}
 
-	// /home 진입 시 선생님이면 /admin으로 이동 (단, ?mode=student면 통과)
-	if (user && pathname === '/home') {
-		const isStudentMode =
-			request.nextUrl.searchParams.get('mode') === 'student';
-		if (!isStudentMode) {
+	// 역할 확인 (캐시 → DB 순서)
+	const needsRoleCheck =
+		(user && pathname === '/home' && !request.nextUrl.searchParams.get('mode')) ||
+		(user && pathname.startsWith('/admin'));
+
+	if (needsRoleCheck) {
+		let isTeacher = false;
+		const cached = request.cookies.get(ROLE_COOKIE)?.value;
+
+		if (cached) {
+			isTeacher = cached === 'teacher';
+		} else {
 			const { data: teacher } = await supabase
 				.from('teachers')
 				.select('id')
-				.eq('user_id', user.id)
+				.eq('user_id', user!.id)
 				.single();
+			isTeacher = !!teacher;
 
-			if (teacher) {
-				return NextResponse.redirect(new URL('/admin', request.url));
-			}
+			// 결과를 쿠키에 캐싱
+			supabaseResponse.cookies.set(ROLE_COOKIE, isTeacher ? 'teacher' : 'student', {
+				httpOnly: true,
+				sameSite: 'lax',
+				maxAge: ROLE_MAX_AGE,
+				path: '/',
+			});
 		}
-	}
 
-	if (pathname.startsWith('/admin')) {
-		const { data: teacher } = await supabase
-			.from('teachers')
-			.select('id')
-			.eq('user_id', user?.id)
-			.single();
-
-		if (!teacher) {
+		if (pathname === '/home' && isTeacher) {
+			return NextResponse.redirect(new URL('/admin', request.url));
+		}
+		if (pathname.startsWith('/admin') && !isTeacher) {
 			return NextResponse.redirect(new URL('/home', request.url));
 		}
 	}

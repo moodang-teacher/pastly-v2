@@ -95,31 +95,31 @@ export default function HomePage() {
 		}
 		setIsEmailUser(user.identities?.some((i) => i.provider === 'email') ?? false);
 
-		// 선생님 여부 확인 + 이름/전공 가져오기
-		const { data: teacher } = await supabase
-			.from('teachers')
-			.select('id, name, department:departments(*)')
-			.eq('user_id', user.id)
-			.single();
+		// teachers + students 병렬 조회
+		const [{ data: teacher }, { data: st }] = await Promise.all([
+			supabase
+				.from('teachers')
+				.select('id, name, department:departments(*)')
+				.eq('user_id', user.id)
+				.single(),
+			supabase
+				.from('students')
+				.select('*, department:departments(*), cohort:cohorts(*)')
+				.eq('user_id', user.id)
+				.single(),
+		]);
+
 		setIsTeacher(!!teacher);
 		if (teacher) {
 			setTeacherName((teacher as any).name || '');
 			setDepartment((teacher as any).department || null);
 		}
 
-		const { data: st } = await supabase
-			.from('students')
-			.select('*, department:departments(*), cohort:cohorts(*)')
-			.eq('user_id', user.id)
-			.single();
-
 		if (!st) {
-			// 선생님이면 학생 레코드 생성 안 함
 			if (teacher) {
 				setLoading(false);
 				return;
 			}
-			// Google 로그인 시 user_metadata에서 이름 가져오기
 			const displayName =
 				user.user_metadata?.full_name ||
 				user.user_metadata?.name ||
@@ -148,15 +148,15 @@ export default function HomePage() {
 		}
 		setDepartment(st.department);
 
-		const { count } = await supabase
-			.from('wrong_answers')
-			.select('*', { count: 'exact', head: true })
-			.eq('student_id', st.id);
+		// wrong_answers + rankings 병렬 조회
+		const [{ count }, { data: rank }] = await Promise.all([
+			supabase
+				.from('wrong_answers')
+				.select('*', { count: 'exact', head: true })
+				.eq('student_id', st.id),
+			supabase.rpc('get_rankings', { p_department_id: st.department_id }),
+		]);
 		setWrongCount(count || 0);
-
-		const { data: rank } = await supabase.rpc('get_rankings', {
-			p_department_id: st.department_id,
-		});
 		setRankings(rank || []);
 
 		setLoading(false);
