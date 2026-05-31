@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pastly 선생님 가이드</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; line-height: 1.6; }
+  .header { background: #6d5ef1; color: white; padding: 28px 20px; text-align: center; }
+  .header h1 { font-size: 1.4rem; font-weight: 800; }
+  .header p { font-size: 0.85rem; opacity: 0.85; margin-top: 4px; }
+  .container { max-width: 680px; margin: 0 auto; padding: 20px; }
+  .section { background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  h2 { font-size: 1rem; font-weight: 800; color: #6d5ef1; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { background: #f1f0fe; color: #6d5ef1; text-align: left; padding: 8px 10px; font-weight: 700; }
+  td { padding: 8px 10px; border-top: 1px solid #f1f5f9; vertical-align: top; }
+  code { background: #f1f0fe; color: #4f46e5; padding: 1px 6px; border-radius: 6px; font-size: 0.8rem; font-family: monospace; }
+  pre { background: #1e1b4b; color: #a5b4fc; padding: 14px; border-radius: 12px; font-size: 0.78rem; overflow-x: auto; line-height: 1.7; margin-top: 10px; }
+  .steps { counter-reset: step; list-style: none; }
+  .steps li { counter-increment: step; padding: 8px 0 8px 36px; position: relative; border-top: 1px solid #f1f5f9; font-size: 0.9rem; }
+  .steps li:first-child { border-top: none; }
+  .steps li::before { content: counter(step); position: absolute; left: 0; top: 9px; width: 24px; height: 24px; background: #6d5ef1; color: white; border-radius: 50%; font-size: 0.75rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .tip { background: #fef9c3; border-left: 3px solid #eab308; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-top: 10px; }
+  .gem-btn { display: inline-block; background: #6d5ef1; color: white; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 0.9rem; margin-top: 10px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+  .badge-purple { background: #f1f0fe; color: #6d5ef1; }
+  .badge-green { background: #dcfce7; color: #16a34a; }
+  p { font-size: 0.9rem; margin-top: 6px; }
+  ul { padding-left: 18px; font-size: 0.88rem; }
+  ul li { margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📝 Pastly 선생님 가이드</h1>
+  <p>문제 업로드 방법 안내</p>
+</div>
+
+<div class="container">
+
+  <!-- 시험 유형 -->
+  <div class="section">
+    <h2>📌 시험 유형</h2>
+    <table>
+      <tr><th>유형</th><th>설명</th></tr>
+      <tr><td>📚 기출문제</td><td>자격증 기출, 랜덤 60문항 출제</td></tr>
+      <tr><td>✏️ 모의고사</td><td>학교 평가용, 점수 기록됨</td></tr>
+      <tr><td>⚡ Crash Test</td><td>기출에서 자동 20문항 — <strong>업로드 불필요</strong></td></tr>
+    </table>
+  </div>
+
+  <!-- Google Gems -->
+  <div class="section">
+    <h2>🤖 Google Gems로 JSON 만들기</h2>
+    <a class="gem-btn" href="https://gemini.google.com/gem/1Q4vqDe5Odxk5KrBwNz1Lj0UYtxLtUgyP?usp=sharing" target="_blank">📎 Gems 바로가기</a>
+    <ol class="steps" style="margin-top: 14px;">
+      <li>위 링크에서 Gems 접속 (Google 로그인 필요)</li>
+      <li>기출문제 PDF 또는 이미지를 채팅창에 업로드</li>
+      <li><span class="badge badge-purple">기출문제용</span> 또는 <span class="badge badge-green">모의고사용</span> 중 선택해서 요청</li>
+      <li>출력된 JSON 전체 복사 → 메모장 붙여넣기 → <code>.json</code> 파일로 저장</li>
+    </ol>
+    <div class="tip">💡 파일명 예시: <code>헤어_기출_20250601.json</code></div>
+  </div>
+
+  <!-- JSON 형식 -->
+  <div class="section">
+    <h2>📄 JSON 형식 참고</h2>
+    <p><code>answer_index</code>: 1번 정답=<code>0</code>, 2번=<code>1</code>, 3번=<code>2</code>, 4번=<code>3</code></p>
+    <pre>{
+  "questions": [
+    {
+      "category": "헤어미용",
+      "question_text": "문제 내용",
+      "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
+      "answer_index": 2,
+      "explanation": "해설 (생략 가능)"
+    }
+  ]
+}</pre>
+  </div>
+
+  <!-- 업로드 방법 -->
+  <div class="section">
+    <h2>⬆️ 업로드 방법</h2>
+    <ol class="steps">
+      <li>관리자 페이지 → <strong>문제 관리</strong></li>
+      <li>전공 / 시험 유형 선택</li>
+      <li>미용 공통 과목이면 <strong>"공통 과목"</strong> 토글 ON</li>
+      <li>JSON 파일 선택 → 문제 수 확인 → <strong>업로드</strong></li>
+    </ol>
+  </div>
+
+  <!-- 공통 과목 -->
+  <div class="section">
+    <h2>🔗 공통 과목 안내</h2>
+    <p>공중위생관리학 · 화장품학 · 피부학은 <strong>모든 미용 세부전공 학생이 공유</strong>합니다.</p>
+    <ul>
+      <li>헤어 선생님이 올린 공통 문제 → 네일·피부·메이크업 학생도 풀게 됨</li>
+      <li>중복 업로드 OK — 시스템이 자동으로 섞어서 출제</li>
+    </ul>
+  </div>
+
+  <!-- 자주 하는 실수 -->
+  <div class="section">
+    <h2>⚠️ 자주 하는 실수</h2>
+    <table>
+      <tr><th>상황</th><th>해결</th></tr>
+      <tr><td>파일 오류 남</td><td>Gems에 "JSON만 출력해줘, 설명 빼고" 재요청</td></tr>
+      <tr><td>문제 수 부족</td><td>파일 나눠서 여러 번 올려도 됨 (자동 합산)</td></tr>
+      <tr><td>그림 있는 문제</td><td>"문제 1개 직접 입력" 탭에서 이미지 첨부</td></tr>
+      <tr><td>문제 임시 제거</td><td>문제 목록 👁️ 버튼으로 비활성화 (삭제 아님)</td></tr>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>
