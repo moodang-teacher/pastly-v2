@@ -13,8 +13,10 @@ import {
 	ChevronDown,
 	Camera,
 	LayoutDashboard,
+	KeyRound,
 } from 'lucide-react';
 import Image from 'next/image';
+import ChangePasswordModal from '@/components/ChangePasswordModal';
 
 interface RankEntry {
 	name: string;
@@ -79,6 +81,8 @@ export default function HomePage() {
 	const [avatarUploading, setAvatarUploading] = useState(false);
 	const [isTeacher, setIsTeacher] = useState(false);
 	const [teacherName, setTeacherName] = useState('');
+	const [isEmailUser, setIsEmailUser] = useState(false);
+	const [showPwModal, setShowPwModal] = useState(false);
 
 	const loadData = useCallback(async () => {
 		const {
@@ -88,6 +92,7 @@ export default function HomePage() {
 			router.push('/login');
 			return;
 		}
+		setIsEmailUser(user.identities?.some((i) => i.provider === 'email') ?? false);
 
 		// 선생님 여부 확인 + 이름/전공 가져오기
 		const { data: teacher } = await supabase
@@ -214,6 +219,7 @@ export default function HomePage() {
 
 	return (
 		<div className="max-w-md mx-auto min-h-screen flex flex-col p-5 pb-8">
+			<ChangePasswordModal isOpen={showPwModal} onClose={() => setShowPwModal(false)} />
 			{/* 헤더 */}
 			<header className="flex justify-between items-center mb-6">
 				<img
@@ -230,6 +236,14 @@ export default function HomePage() {
 						>
 							<LayoutDashboard size={15} />
 							관리자
+						</button>
+					)}
+					{isEmailUser && (
+						<button
+							onClick={() => setShowPwModal(true)}
+							className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 transition-all active:scale-90"
+						>
+							<KeyRound size={18} />
 						</button>
 					)}
 					<button

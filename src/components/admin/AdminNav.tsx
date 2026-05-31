@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import {
 	Users,
 	BookOpen,
@@ -9,9 +10,11 @@ import {
 	LayoutDashboard,
 	LogOut,
 	GraduationCap,
+	KeyRound,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import ChangePasswordModal from '@/components/ChangePasswordModal';
 
 const NAV = [
 	{ href: '/admin', icon: LayoutDashboard, label: '대시보드' },
@@ -24,6 +27,14 @@ export default function AdminNav({ teacher }: { teacher: any }) {
 	const path = usePathname();
 	const router = useRouter();
 	const supabase = createClient();
+	const [isEmailUser, setIsEmailUser] = useState(false);
+	const [showPwModal, setShowPwModal] = useState(false);
+
+	useEffect(() => {
+		supabase.auth.getUser().then(({ data: { user } }) => {
+			setIsEmailUser(user?.identities?.some((i) => i.provider === 'email') ?? false);
+		});
+	}, []);
 
 	async function logout() {
 		await supabase.auth.signOut();
@@ -32,6 +43,7 @@ export default function AdminNav({ teacher }: { teacher: any }) {
 
 	return (
 		<header className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 sticky top-0 z-40">
+			<ChangePasswordModal isOpen={showPwModal} onClose={() => setShowPwModal(false)} />
 			<div className="max-w-2xl mx-auto px-5 py-3 flex items-center justify-between">
 				<div className="flex items-center gap-3">
 					<span className="text-lg font-black text-brand-600 dark:text-brand-400">
@@ -52,6 +64,14 @@ export default function AdminNav({ teacher }: { teacher: any }) {
 						<GraduationCap size={15} />
 						학생 화면
 					</Link>
+					{isEmailUser && (
+						<button
+							onClick={() => setShowPwModal(true)}
+							className="p-2 text-slate-400 hover:text-brand-500 transition-colors"
+						>
+							<KeyRound size={18} />
+						</button>
+					)}
 					<button
 						onClick={logout}
 						className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
