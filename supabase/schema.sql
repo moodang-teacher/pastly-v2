@@ -177,7 +177,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 문제 뽑기 함수
+-- 문제 뽑기 함수 (question_text 기준 중복 제거 후 추출)
 CREATE OR REPLACE FUNCTION get_quiz_questions(
   p_department_id UUID,
   p_exam_type TEXT
@@ -192,28 +192,36 @@ DECLARE
 BEGIN
   SELECT * INTO v_dept FROM departments WHERE id = p_department_id;
   v_specialty_count := v_dept.specialty_count;
-  v_common_count := v_dept.common_count;
-  v_parent_id := v_dept.parent_id;
-  v_is_beauty := (v_parent_id IS NOT NULL AND v_common_count > 0);
+  v_common_count    := v_dept.common_count;
+  v_parent_id       := v_dept.parent_id;
+  v_is_beauty       := (v_parent_id IS NOT NULL AND v_common_count > 0);
 
   IF v_is_beauty THEN
-    -- 미용: 전공 풀 + 공통 풀에서 비율에 맞게 추출
+    -- 미용: 전공 풀 + 공통 풀에서 비율에 맞게 추출 (각 풀에서 중복 제거)
     RETURN QUERY
     WITH specialty_pool AS (
-      SELECT q.* FROM questions q
-      WHERE q.department_id = p_department_id
-        AND q.is_common = false
-        AND q.exam_type = p_exam_type
-        AND q.is_active = true
+      SELECT * FROM (
+        SELECT DISTINCT ON (q.question_text) q.*
+        FROM questions q
+        WHERE q.department_id = p_department_id
+          AND q.is_common = false
+          AND q.exam_type = p_exam_type
+          AND q.is_active = true
+        ORDER BY q.question_text, random()
+      ) deduped
       ORDER BY random()
       LIMIT v_specialty_count
     ),
     common_pool AS (
-      SELECT q.* FROM questions q
-      WHERE q.department_id = v_parent_id
-        AND q.is_common = true
-        AND q.exam_type = p_exam_type
-        AND q.is_active = true
+      SELECT * FROM (
+        SELECT DISTINCT ON (q.question_text) q.*
+        FROM questions q
+        WHERE q.department_id = v_parent_id
+          AND q.is_common = true
+          AND q.exam_type = p_exam_type
+          AND q.is_active = true
+        ORDER BY q.question_text, random()
+      ) deduped
       ORDER BY random()
       LIMIT v_common_count
     )
@@ -224,13 +232,17 @@ BEGIN
       ORDER BY random()
     ) q;
   ELSE
-    -- 제품디자인: 단일 풀에서 60문제
+    -- 제품디자인: 단일 풀에서 60문제 (중복 제거)
     RETURN QUERY
     SELECT row_to_json(q.*)::JSONB FROM (
-      SELECT * FROM questions
-      WHERE department_id = p_department_id
-        AND exam_type = p_exam_type
-        AND is_active = true
+      SELECT * FROM (
+        SELECT DISTINCT ON (question_text) *
+        FROM questions
+        WHERE department_id = p_department_id
+          AND exam_type = p_exam_type
+          AND is_active = true
+        ORDER BY question_text, random()
+      ) deduped
       ORDER BY random()
       LIMIT 60
     ) q;
