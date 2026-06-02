@@ -37,11 +37,18 @@ export async function middleware(request: NextRequest) {
 	const isPublic = publicPaths.some((p) => pathname.startsWith(p));
 
 	if (!user && !isPublic) {
-		return NextResponse.redirect(new URL('/login', request.url));
+		const res = NextResponse.redirect(new URL('/login', request.url));
+		res.cookies.delete(ROLE_COOKIE);
+		return res;
+	}
+
+	if (!user && pathname === '/login') {
+		const res = NextResponse.next({ request });
+		res.cookies.delete(ROLE_COOKIE);
+		return res;
 	}
 
 	if (user && pathname === '/login') {
-		// 로그아웃 시 role 쿠키 초기화
 		const res = NextResponse.redirect(new URL('/home', request.url));
 		res.cookies.delete(ROLE_COOKIE);
 		return res;
@@ -55,10 +62,18 @@ export async function middleware(request: NextRequest) {
 	if (needsRoleCheck) {
 		let isTeacher = false;
 		const cached = request.cookies.get(ROLE_COOKIE)?.value;
+		let cacheHit = false;
 
 		if (cached) {
-			isTeacher = cached === 'teacher';
-		} else {
+			const [cachedUserId, cachedRole] = cached.split(':');
+			if (cachedUserId === user!.id) {
+				isTeacher = cachedRole === 'teacher';
+				cacheHit = true;
+			}
+			// 다른 user의 캐시이면 무시하고 DB 조회
+		}
+
+		if (!cacheHit) {
 			const { data: teacher } = await supabase
 				.from('teachers')
 				.select('id')
@@ -66,13 +81,16 @@ export async function middleware(request: NextRequest) {
 				.single();
 			isTeacher = !!teacher;
 
-			// 결과를 쿠키에 캐싱
-			supabaseResponse.cookies.set(ROLE_COOKIE, isTeacher ? 'teacher' : 'student', {
-				httpOnly: true,
-				sameSite: 'lax',
-				maxAge: ROLE_MAX_AGE,
-				path: '/',
-			});
+			supabaseResponse.cookies.set(
+				ROLE_COOKIE,
+				`${user!.id}:${isTeacher ? 'teacher' : 'student'}`,
+				{
+					httpOnly: true,
+					sameSite: 'lax',
+					maxAge: ROLE_MAX_AGE,
+					path: '/',
+				},
+			);
 		}
 
 		if (pathname === '/home' && isTeacher) {
