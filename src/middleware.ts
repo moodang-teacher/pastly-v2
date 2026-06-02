@@ -57,33 +57,35 @@ export async function middleware(request: NextRequest) {
 	// 역할 확인 (캐시 → DB 순서)
 	const needsRoleCheck =
 		(user && pathname === '/home' && !request.nextUrl.searchParams.get('mode')) ||
-		(user && pathname.startsWith('/admin'));
+		(user && pathname.startsWith('/admin')) ||
+		(user && pathname.startsWith('/master'));
 
 	if (needsRoleCheck) {
-		let isTeacher = false;
+		let role: 'student' | 'teacher' | 'master' = 'student';
 		const cached = request.cookies.get(ROLE_COOKIE)?.value;
 		let cacheHit = false;
 
 		if (cached) {
 			const [cachedUserId, cachedRole] = cached.split(':');
 			if (cachedUserId === user!.id) {
-				isTeacher = cachedRole === 'teacher';
+				role = cachedRole as typeof role;
 				cacheHit = true;
 			}
-			// 다른 user의 캐시이면 무시하고 DB 조회
 		}
 
 		if (!cacheHit) {
 			const { data: teacher } = await supabase
 				.from('teachers')
-				.select('id')
+				.select('id, is_master')
 				.eq('user_id', user!.id)
 				.single();
-			isTeacher = !!teacher;
+
+			if (teacher?.is_master) role = 'master';
+			else if (teacher) role = 'teacher';
 
 			supabaseResponse.cookies.set(
 				ROLE_COOKIE,
-				`${user!.id}:${isTeacher ? 'teacher' : 'student'}`,
+				`${user!.id}:${role}`,
 				{
 					httpOnly: true,
 					sameSite: 'lax',
@@ -93,10 +95,19 @@ export async function middleware(request: NextRequest) {
 			);
 		}
 
+		const isMaster = role === 'master';
+		const isTeacher = role === 'teacher';
+
+		if (pathname === '/home' && isMaster) {
+			return NextResponse.redirect(new URL('/master', request.url));
+		}
 		if (pathname === '/home' && isTeacher) {
 			return NextResponse.redirect(new URL('/admin', request.url));
 		}
 		if (pathname.startsWith('/admin') && !isTeacher) {
+			return NextResponse.redirect(new URL('/home', request.url));
+		}
+		if (pathname.startsWith('/master') && !isMaster) {
 			return NextResponse.redirect(new URL('/home', request.url));
 		}
 	}

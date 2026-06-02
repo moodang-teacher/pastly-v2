@@ -29,6 +29,7 @@ CREATE TABLE teachers (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
   name TEXT NOT NULL,
   department_id UUID REFERENCES departments(id),
+  is_master BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -113,12 +114,12 @@ CREATE POLICY "departments_public_read" ON departments FOR SELECT USING (true);
 CREATE POLICY "teachers_self" ON teachers FOR ALL USING (user_id = auth.uid());
 CREATE POLICY "teachers_public_read" ON teachers FOR SELECT USING (true);
 
--- cohorts: 선생님은 자기 반, 학생은 자기 기수
+-- cohorts: 선생님은 자기 반, 마스터는 전체 읽기
 CREATE POLICY "cohorts_teacher_manage" ON cohorts FOR ALL
   USING (teacher_id IN (SELECT id FROM teachers WHERE user_id = auth.uid()));
 CREATE POLICY "cohorts_public_read" ON cohorts FOR SELECT USING (true);
 
--- students: 자기 정보 + 같은 전공 선생님
+-- students: 자기 정보 + 같은 전공 선생님 + 마스터 전체 읽기
 CREATE POLICY "students_self" ON students FOR SELECT USING (user_id = auth.uid());
 CREATE POLICY "students_teacher_manage" ON students FOR ALL
   USING (
@@ -128,6 +129,8 @@ CREATE POLICY "students_teacher_manage" ON students FOR ALL
   );
 CREATE POLICY "students_insert_self" ON students FOR INSERT WITH CHECK (user_id = auth.uid());
 CREATE POLICY "students_update_self" ON students FOR UPDATE USING (user_id = auth.uid());
+CREATE POLICY "students_master_read" ON students FOR SELECT
+  USING (EXISTS (SELECT 1 FROM teachers WHERE user_id = auth.uid() AND is_master = true));
 
 -- questions: 모두 읽기, 선생님만 쓰기
 CREATE POLICY "questions_public_read" ON questions FOR SELECT USING (is_active = true);
@@ -136,10 +139,12 @@ CREATE POLICY "questions_teacher_insert" ON questions FOR INSERT
 CREATE POLICY "questions_teacher_update" ON questions FOR UPDATE
   USING (uploaded_by IN (SELECT id FROM teachers WHERE user_id = auth.uid()));
 
--- attempts: 자기 기록만
+-- attempts: 자기 기록만 + 마스터 전체 읽기
 CREATE POLICY "attempts_self" ON attempts FOR ALL USING (
   student_id IN (SELECT id FROM students WHERE user_id = auth.uid())
 );
+CREATE POLICY "attempts_master_read" ON attempts FOR SELECT
+  USING (EXISTS (SELECT 1 FROM teachers WHERE user_id = auth.uid() AND is_master = true));
 
 -- wrong_answers: 자기 오답만
 CREATE POLICY "wrong_answers_self" ON wrong_answers FOR ALL USING (
