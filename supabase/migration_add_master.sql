@@ -21,3 +21,10 @@ CREATE POLICY "attempts_master_read" ON attempts FOR SELECT
 -- user_id 는 Supabase > Authentication > Users 에서 확인
 -- ============================================
 -- UPDATE teachers SET is_master = true WHERE user_id = '여기에-user-id-입력';
+
+-- ============================================
+-- 4. 마스터 계정의 학생 레코드 삭제
+-- (회원가입 폼으로 가입 시 생긴 student 레코드 제거)
+-- ============================================
+DELETE FROM students
+  WHERE user_id IN (SELECT user_id FROM teachers WHERE is_master = true);

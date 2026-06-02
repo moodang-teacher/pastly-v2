@@ -4,24 +4,38 @@ import Link from 'next/link';
 export default async function MasterDashboard() {
   const supabase = await createClient();
 
+  // master user_id 목록 먼저 조회 (학생 수 집계에서 제외하기 위해)
+  const { data: masterUsers } = await supabase
+    .from('teachers')
+    .select('user_id')
+    .eq('is_master', true);
+  const masterUserIds = (masterUsers || []).map((m: any) => m.user_id);
+
   const [{ data: departments }, { data: teachers }, { count: totalStudents }, { count: totalCohorts }] =
     await Promise.all([
       supabase.from('departments').select('id, name, slug').neq('slug', 'beauty').eq('is_active', true).order('name'),
-      supabase.from('teachers').select('id, name, department_id, department:departments(name)'),
-      supabase.from('students').select('*', { count: 'exact', head: true }),
+      supabase.from('teachers').select('id, name, department_id, is_master, department:departments(name)'),
+      masterUserIds.length > 0
+        ? supabase.from('students').select('*', { count: 'exact', head: true }).not('user_id', 'in', `(${masterUserIds.join(',')})`)
+        : supabase.from('students').select('*', { count: 'exact', head: true }),
       supabase.from('cohorts').select('*', { count: 'exact', head: true }).eq('is_active', true),
     ]);
 
   const deptStats = await Promise.all(
-    (departments || []).map(async (dept) => {
+    (departments || []).map(async (dept: any) => {
+      let studentQuery = supabase.from('students').select('*', { count: 'exact', head: true }).eq('department_id', dept.id);
+      if (masterUserIds.length > 0) {
+        studentQuery = studentQuery.not('user_id', 'in', `(${masterUserIds.join(',')})`);
+      }
+
       const [{ count: studentCount }, { count: cohortCount }, { count: questionCount }] =
         await Promise.all([
-          supabase.from('students').select('*', { count: 'exact', head: true }).eq('department_id', dept.id),
+          studentQuery,
           supabase.from('cohorts').select('*', { count: 'exact', head: true }).eq('department_id', dept.id).eq('is_active', true),
           supabase.from('questions').select('*', { count: 'exact', head: true }).eq('department_id', dept.id).eq('is_active', true),
         ]);
 
-      const deptTeachers = (teachers || []).filter((t) => t.department_id === dept.id);
+      const deptTeachers = (teachers || []).filter((t: any) => t.department_id === dept.id && !t.is_master);
 
       return { ...dept, studentCount, cohortCount, questionCount, teachers: deptTeachers };
     }),
@@ -56,7 +70,7 @@ export default async function MasterDashboard() {
       {/* 전공별 현황 */}
       <div className="space-y-3">
         <h2 className="font-black text-slate-800 dark:text-white">전공별 현황</h2>
-        {deptStats.map((dept) => (
+        {deptStats.map((dept: any) => (
           <div key={dept.id} className="card p-5">
             <div className="flex items-start justify-between mb-3">
               <div>

@@ -35,12 +35,23 @@ export default function MasterStudentsPage() {
 
   async function loadStudents(deptId: string) {
     setLoading(true);
+
+    // master 계정의 user_id 목록 조회
+    const { data: masters } = await supabase
+      .from('teachers')
+      .select('user_id')
+      .eq('is_master', true);
+    const masterUserIds = (masters || []).map((m: any) => m.user_id);
+
     let query = supabase
       .from('students')
       .select('*, department:departments(name), cohort:cohorts(name)')
       .order('name');
 
     if (deptId) query = query.eq('department_id', deptId);
+    if (masterUserIds.length > 0) {
+      query = query.not('user_id', 'in', `(${masterUserIds.join(',')})`);
+    }
 
     const { data } = await query;
     setStudents(data || []);
@@ -52,7 +63,7 @@ export default function MasterStudentsPage() {
     loadStudents(deptId);
   }
 
-  const filtered = students.filter((s) =>
+  const filtered = students.filter((s: any) =>
     s.name.toLowerCase().includes(search.toLowerCase()),
   );
 
@@ -96,7 +107,7 @@ export default function MasterStudentsPage() {
           <p className="text-center text-slate-400 py-8 text-sm">학생이 없습니다</p>
         ) : (
           <div className="space-y-2">
-            {filtered.map((s) => (
+            {filtered.map((s: any) => (
               <div key={s.id} className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div>
