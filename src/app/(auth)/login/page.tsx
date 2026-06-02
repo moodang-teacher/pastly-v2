@@ -59,6 +59,7 @@ export default function LoginPage() {
 				if (error) throw new Error('이메일 또는 비밀번호가 올바르지 않습니다.');
 				router.push('/home');
 				router.refresh();
+				// 로그인 성공 시 loading을 해제하지 않음 — 네비게이션 완료까지 "처리중" 유지
 			} else {
 				if (!name.trim()) throw new Error('이름을 입력해주세요.');
 				if (!deptId)
@@ -93,10 +94,10 @@ export default function LoginPage() {
 
 				alert('회원가입이 완료되었습니다!\n선생님께 기수 배정을 요청하세요.');
 				setTab('login');
+				setLoading(false);
 			}
 		} catch (err: any) {
 			setError(err.message);
-		} finally {
 			setLoading(false);
 		}
 	}
