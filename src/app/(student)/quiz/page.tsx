@@ -332,11 +332,18 @@ function QuizContent() {
 					.eq('student_id', st?.id);
 				qs = (wa || []).map((w: any) => w.question).filter(Boolean);
 			} else {
-				const { data } = await supabase.rpc('get_quiz_questions', {
+				const { data, error } = await supabase.rpc('get_quiz_questions', {
 					p_department_id: deptId,
 					p_exam_type: examType,
 				});
-				qs = (data || []) as Question[];
+				if (error) {
+					console.error('문제 불러오기 RPC 오류:', error);
+					alert(`문제를 불러오는 중 오류가 발생했습니다.\n오류: ${error.message}`);
+					router.push('/home');
+					return;
+				}
+				// RPC는 { question: {...} } 형태로 반환하므로 unwrap
+				qs = ((data || []) as any[]).map((row: any) => row?.question ?? row) as Question[];
 			}
 
 			if (qs.length === 0) {

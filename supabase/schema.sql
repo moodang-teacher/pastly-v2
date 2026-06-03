@@ -198,6 +198,7 @@ BEGIN
 
   IF v_is_beauty THEN
     -- 미용: 전공 풀 + 공통 풀에서 비율에 맞게 추출 (각 풀에서 중복 제거)
+    -- crash 타입은 모든 exam_type 포함
     RETURN QUERY
     WITH specialty_pool AS (
       SELECT * FROM (
@@ -205,7 +206,7 @@ BEGIN
         FROM questions q
         WHERE q.department_id = p_department_id
           AND q.is_common = false
-          AND q.exam_type = p_exam_type
+          AND (p_exam_type = 'crash' OR q.exam_type = p_exam_type)
           AND q.is_active = true
         ORDER BY q.question_text, random()
       ) deduped
@@ -218,7 +219,7 @@ BEGIN
         FROM questions q
         WHERE q.department_id = v_parent_id
           AND q.is_common = true
-          AND q.exam_type = p_exam_type
+          AND (p_exam_type = 'crash' OR q.exam_type = p_exam_type)
           AND q.is_active = true
         ORDER BY q.question_text, random()
       ) deduped
@@ -233,13 +234,14 @@ BEGIN
     ) q;
   ELSE
     -- 제품디자인: 단일 풀에서 60문제 (중복 제거)
+    -- crash 타입은 모든 exam_type 포함
     RETURN QUERY
     SELECT row_to_json(q.*)::JSONB FROM (
       SELECT * FROM (
         SELECT DISTINCT ON (question_text) *
         FROM questions
         WHERE department_id = p_department_id
-          AND exam_type = p_exam_type
+          AND (p_exam_type = 'crash' OR exam_type = p_exam_type)
           AND is_active = true
         ORDER BY question_text, random()
       ) deduped
