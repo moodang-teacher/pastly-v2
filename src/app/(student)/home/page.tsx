@@ -38,30 +38,55 @@ const EXAM_TYPES = [
 
 // 이미지 압축 함수
 async function compressImage(file: File): Promise<string> {
-	return new Promise((resolve) => {
-		const canvas = document.createElement('canvas');
-		const ctx = canvas.getContext('2d')!;
-		const img = new window.Image();
-		img.onload = () => {
-			const max = 300;
-			let { width, height } = img;
-			if (width > height) {
-				if (width > max) {
-					height = (height * max) / width;
-					width = max;
-				}
-			} else {
-				if (height > max) {
-					width = (width * max) / height;
-					height = max;
-				}
-			}
-			canvas.width = width;
-			canvas.height = height;
-			ctx.drawImage(img, 0, 0, width, height);
-			resolve(canvas.toDataURL('image/jpeg', 0.82));
+	return new Promise((resolve, reject) => {
+		const readAsDataUrl = () => {
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				const result = e.target?.result;
+				typeof result === 'string' ? resolve(result) : reject(new Error('파일 읽기 실패'));
+			};
+			reader.onerror = () => reject(new Error('파일 읽기 실패'));
+			reader.readAsDataURL(file);
 		};
-		img.src = URL.createObjectURL(file);
+
+		const canvas = document.createElement('canvas');
+		const ctx = canvas.getContext('2d');
+		if (!ctx) {
+			readAsDataUrl();
+			return;
+		}
+
+		const img = new window.Image();
+		const objectUrl = URL.createObjectURL(file);
+		img.onload = () => {
+			URL.revokeObjectURL(objectUrl);
+			try {
+				const max = 300;
+				let { width, height } = img;
+				if (width > height) {
+					if (width > max) { height = (height * max) / width; width = max; }
+				} else {
+					if (height > max) { width = (width * max) / height; height = max; }
+				}
+				canvas.width = width;
+				canvas.height = height;
+				ctx.drawImage(img, 0, 0, width, height);
+				const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+				// 프라이버시 확장 프로그램이 canvas를 차단하면 빈 문자열이 반환됨
+				if (!dataUrl || dataUrl === 'data:,' || dataUrl.length < 100) {
+					readAsDataUrl();
+					return;
+				}
+				resolve(dataUrl);
+			} catch {
+				reject(new Error('이미지 처리 실패'));
+			}
+		};
+		img.onerror = () => {
+			URL.revokeObjectURL(objectUrl);
+			reject(new Error('이미지 로드 실패'));
+		};
+		img.src = objectUrl;
 	});
 }
 
@@ -197,12 +222,14 @@ export default function HomePage() {
 		setAvatarUploading(true);
 		try {
 			const base64 = await compressImage(file);
-			await supabase
+			const { error } = await supabase
 				.from('students')
 				.update({ photo_url: base64 })
 				.eq('id', student.id);
+			if (error) throw error;
 			setStudent((prev) => (prev ? { ...prev, photo_url: base64 } : prev));
-		} catch {
+		} catch (err) {
+			console.error('아바타 업로드 오류:', err);
 			alert('아바타 변경 중 오류가 발생했습니다.');
 		} finally {
 			setAvatarUploading(false);
@@ -260,10 +287,8 @@ export default function HomePage() {
 			<div className="card p-5 flex items-center gap-4 mb-5">
 				{/* 아바타 (클릭하면 교체) */}
 				<div className="relative flex-none">
-					<button
-						onClick={() => avatarInputRef.current?.click()}
-						disabled={avatarUploading}
-						className="w-14 h-14 rounded-2xl bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center text-2xl overflow-hidden relative group"
+					<label
+						className={`w-14 h-14 rounded-2xl bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center text-2xl overflow-hidden relative group ${avatarUploading ? 'cursor-default pointer-events-none' : 'cursor-pointer'}`}
 					>
 						{student?.photo_url ? (
 							<img
@@ -282,14 +307,15 @@ export default function HomePage() {
 								<Camera size={16} className="text-white" />
 							)}
 						</div>
-					</button>
-					<input
-						ref={avatarInputRef}
-						type="file"
-						accept="image/*"
-						onChange={handleAvatarChange}
-						className="hidden"
-					/>
+						<input
+							ref={avatarInputRef}
+							type="file"
+							accept="image/*"
+							onChange={handleAvatarChange}
+							disabled={avatarUploading}
+							className="hidden"
+						/>
+					</label>
 				</div>
 
 				<div className="flex-1 min-w-0">
