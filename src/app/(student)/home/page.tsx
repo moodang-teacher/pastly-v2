@@ -167,7 +167,7 @@ export default function HomePage() {
 		}
 
 		setStudent(st);
-		if (!st.department_id) {
+		if (!st.department_id && !teacher) {
 			router.push('/select-dept');
 			return;
 		}
