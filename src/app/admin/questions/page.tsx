@@ -239,8 +239,7 @@ export default function QuestionsPage() {
         .from("questions")
         .select("*")
         .eq("uploaded_by", t?.id)
-        .order("created_at", { ascending: false })
-        .limit(50);
+        .order("created_at", { ascending: false });
       setQuestions(qs || []);
     }
     load();
@@ -300,8 +299,7 @@ export default function QuestionsPage() {
         .from("questions")
         .select("*")
         .eq("uploaded_by", teacher?.id)
-        .order("created_at", { ascending: false })
-        .limit(50);
+        .order("created_at", { ascending: false });
       setQuestions(qs || []);
       await loadCounts();
     }
@@ -388,8 +386,7 @@ export default function QuestionsPage() {
         .from("questions")
         .select("*")
         .eq("uploaded_by", teacher?.id)
-        .order("created_at", { ascending: false })
-        .limit(50);
+        .order("created_at", { ascending: false });
       setQuestions(qs || []);
       await loadCounts();
     } catch (err: any) {
