@@ -135,6 +135,7 @@ export interface UploadQuestion {
   answer_index: number; // 0-based
   explanation?: string;
   image_url?: string;
+  image?: string;
 }
 
 export interface UploadPayload {

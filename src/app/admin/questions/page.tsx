@@ -72,7 +72,7 @@ export default function QuestionsPage() {
   const [teacher, setTeacher] = useState<any>(null);
   const [departments, setDepartments] = useState<any[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [activeTab, setActiveTab] = useState<"json" | "single">("json");
+  const [activeTab, setActiveTab] = useState<"json" | "single" | "fix">("json");
   const [totalCounts, setTotalCounts] = useState<{
     total: number;
     common?: number;
@@ -88,6 +88,58 @@ export default function QuestionsPage() {
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState("");
+
+  // 이미지 경로 복구 상태
+  const fixFileRef = useRef<HTMLInputElement>(null);
+  const [fixFileName, setFixFileName] = useState("");
+  const [fixParsed, setFixParsed] = useState<{ question_text: string; image: string }[]>([]);
+  const [fixing, setFixing] = useState(false);
+  const [fixResult, setFixResult] = useState("");
+
+  function handleFixFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFixFileName(file.name);
+    setFixParsed([]);
+    setFixResult("");
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target?.result as string);
+        const withImages = (data.questions || []).filter(
+          (q: any) => q.image || q.image_url
+        ).map((q: any) => ({
+          question_text: q.question_text,
+          image: q.image_url || q.image,
+        }));
+        setFixParsed(withImages);
+      } catch {
+        setFixResult("❌ JSON 파싱 오류");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  async function handleFixImages() {
+    if (!fixParsed.length || !teacher) return;
+    setFixing(true);
+    setFixResult(`🔄 0 / ${fixParsed.length} 처리 중...`);
+
+    let success = 0;
+    let failed = 0;
+    for (const item of fixParsed) {
+      const { error } = await supabase
+        .from("questions")
+        .update({ image_url: item.image })
+        .eq("question_text", item.question_text)
+        .eq("uploaded_by", teacher.id);
+      if (error) failed++;
+      else success++;
+      setFixResult(`🔄 ${success + failed} / ${fixParsed.length} 처리 중...`);
+    }
+    setFixResult(`✅ 완료! ${success}개 업데이트${failed ? `, ${failed}개 실패` : ""}`);
+    setFixing(false);
+  }
 
   // 1개 직접 입력 상태
   const [sCategory, setSCategory] = useState("");
@@ -232,7 +284,7 @@ export default function QuestionsPage() {
       options: q.options,
       answer_index: q.answer_index,
       explanation: q.explanation || null,
-      image_url: q.image_url || null,
+      image_url: q.image_url || q.image || null,
       uploaded_by: teacher.id,
       is_active: true,
     }));
@@ -380,8 +432,9 @@ export default function QuestionsPage() {
       {/* 탭 전환 */}
       <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
         {[
-          { key: "json", label: "📂 JSON 일괄 업로드" },
-          { key: "single", label: "✏️ 문제 1개 직접 입력" },
+          { key: "json", label: "📂 JSON 업로드" },
+          { key: "single", label: "✏️ 직접 입력" },
+          { key: "fix", label: "🖼 이미지 복구" },
         ].map((t) => (
           <button
             key={t.key}
@@ -557,6 +610,72 @@ export default function QuestionsPage() {
               <p>• 이미지 있는 문제는 "직접 입력" 탭 사용</p>
             </div>
           </details>
+        </div>
+      )}
+
+      {/* ── 이미지 경로 복구 탭 ── */}
+      {activeTab === "fix" && (
+        <div className="card p-5 space-y-4">
+          <h2 className="font-black text-slate-800 dark:text-white flex items-center gap-2">
+            🖼 이미지 경로 일괄 복구
+          </h2>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            이미 업로드된 문제 중 이미지가 없는 문제를 JSON 파일로 일괄 복구합니다.
+            <br />문제 내용(question_text)으로 매칭하여 image_url만 업데이트합니다.
+          </p>
+
+          <div
+            onClick={() => fixFileRef.current?.click()}
+            className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center cursor-pointer hover:border-brand-400 transition-colors"
+          >
+            <div className="text-3xl mb-2">🖼</div>
+            <p className="text-sm font-semibold text-slate-500">
+              {fixFileName || "JSON 파일을 선택하세요"}
+            </p>
+            <p className="text-xs text-slate-400 mt-1">클릭하여 파일 선택</p>
+            <input
+              ref={fixFileRef}
+              type="file"
+              accept=".json"
+              onChange={handleFixFile}
+              className="hidden"
+            />
+          </div>
+
+          {fixParsed.length > 0 && (
+            <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 rounded-2xl p-4">
+              <p className="text-sm font-bold text-amber-700 dark:text-amber-300">
+                이미지 있는 문제 {fixParsed.length}개 감지됨
+              </p>
+              <div className="mt-2 space-y-1 max-h-32 overflow-y-auto no-scrollbar">
+                {fixParsed.map((item, i) => (
+                  <p key={i} className="text-xs text-amber-600 truncate">
+                    • {item.question_text}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {fixResult && (
+            <p className={`text-sm font-bold text-center py-3 rounded-2xl ${
+              fixResult.startsWith("✅")
+                ? "bg-emerald-50 text-emerald-600"
+                : fixResult.startsWith("🔄")
+                  ? "bg-blue-50 text-blue-600"
+                  : "bg-rose-50 text-rose-500"
+            }`}>
+              {fixResult}
+            </p>
+          )}
+
+          <button
+            onClick={handleFixImages}
+            disabled={!fixParsed.length || fixing}
+            className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {fixing ? "복구 중..." : `${fixParsed.length}개 이미지 경로 복구`}
+          </button>
         </div>
       )}
 
