@@ -171,7 +171,9 @@ export default function HomePage() {
 			router.push('/select-dept');
 			return;
 		}
-		setDepartment(st.department);
+		if (!teacher) {
+			setDepartment(st.department);
+		}
 
 		// wrong_answers + rankings 병렬 조회
 		const [{ count }, { data: rank }] = await Promise.all([
