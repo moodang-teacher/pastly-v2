@@ -169,6 +169,7 @@ BEGIN
   SELECT s.id, s.name, s.photo_url, s.high_score, s.total_attempts
   FROM students s
   WHERE s.department_id = p_department_id
+    AND s.total_attempts > 0
     AND (
       s.cohort_id IS NULL
       OR s.cohort_id IN (

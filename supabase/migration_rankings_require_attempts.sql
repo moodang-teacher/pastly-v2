@@ -1,7 +1,7 @@
 -- ============================================
--- 명예의 전당 랭킹 수정 마이그레이션
+-- 명예의 전당: 문제를 풀지 않은 학생 제외
 -- Supabase 대시보드 > SQL Editor 에서 실행
--- 기수(cohort) 미배정 학생도 랭킹에 표시되도록 수정
+-- total_attempts > 0 인 학생만 랭킹에 표시
 -- ============================================
 
 CREATE OR REPLACE FUNCTION get_rankings(p_department_id UUID)
