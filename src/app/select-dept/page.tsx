@@ -5,18 +5,19 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import LoadingScreen from '@/components/LoadingScreen';
 
-interface Department {
+interface TeacherOption {
   id: string;
   name: string;
-  slug: string;
+  department_id: string;
+  department: { name: string; slug: string };
 }
 
 export default function SelectDeptPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [deptId, setDeptId] = useState('');
+  const [teachers, setTeachers] = useState<TeacherOption[]>([]);
+  const [teacherId, setTeacherId] = useState('');
   const [studentId, setStudentId] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -53,28 +54,37 @@ export default function SelectDeptPage() {
         setStudentId(st.id);
       }
 
-      // 전공 목록
-      const { data: depts } = await supabase
-        .from('departments')
-        .select('*')
-        .eq('is_active', true)
-        .neq('slug', 'beauty')
-        .order('name');
-      setDepartments(depts || []);
+      // 선생님 목록 (전공 정보 포함, 마스터 제외)
+      const { data: ts } = await supabase
+        .from('teachers')
+        .select('id, name, department_id, department:departments(name, slug)')
+        .eq('is_master', false);
+      const filtered = (ts || [])
+        .filter((t: any) => t.department?.[0]?.slug !== 'beauty')
+        .map((t: any): TeacherOption => ({
+          ...t,
+          department: t.department?.[0] ?? { name: '', slug: '' },
+        }));
+      setTeachers(filtered);
       setLoading(false);
     }
     load();
   }, []);
 
   async function handleSave() {
-    if (!deptId) return;
+    if (!teacherId) return;
     if (!confirmed) {
-      const dept = departments.find(d => d.id === deptId);
-      if (!confirm(`전공: ${dept?.name}\n\n이 전공으로 설정하시겠습니까?\n변경은 선생님을 통해서만 가능합니다.`)) return;
+      const t = teachers.find(x => x.id === teacherId);
+      const displayName = t ? `${t.department.name}(${t.name} 선생님)` : '';
+      if (!confirm(`과정: ${displayName}\n\n이 과정으로 설정하시겠습니까?\n변경은 선생님을 통해서만 가능합니다.`)) return;
       setConfirmed(true);
     }
     setSaving(true);
-    await supabase.from('students').update({ department_id: deptId }).eq('id', studentId);
+    const selected = teachers.find(x => x.id === teacherId);
+    await supabase.from('students').update({
+      department_id: selected!.department_id,
+      teacher_id: teacherId,
+    }).eq('id', studentId);
     router.push('/home');
     router.refresh();
   }
@@ -85,7 +95,10 @@ export default function SelectDeptPage() {
     );
   }
 
-  const selectedDept = departments.find(d => d.id === deptId);
+  const selectedTeacher = teachers.find(t => t.id === teacherId);
+  const selectedLabel = selectedTeacher
+    ? `${selectedTeacher.department.name}(${selectedTeacher.name} 선생님)`
+    : '';
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-brand-50 to-slate-100 dark:from-slate-950 dark:to-brand-950">
@@ -98,56 +111,65 @@ export default function SelectDeptPage() {
             alt="Pastly"
             className="h-10 w-auto object-contain mx-auto mb-4"
           />
-          <h2 className="text-xl font-black text-slate-900 dark:text-white">전공을 선택해주세요</h2>
+          <h2 className="text-xl font-black text-slate-900 dark:text-white">과정을 선택해주세요</h2>
           <p className="text-sm text-slate-500 mt-1">
-            시험 문제와 랭킹이 전공별로 분리됩니다
+            시험 문제와 랭킹이 과정별로 분리됩니다
           </p>
         </div>
 
-        {/* 전공 선택 버튼 목록 */}
+        {/* 기수(과정) 선택 버튼 목록 */}
         <div className="space-y-2 mb-6">
-          {departments.map(d => (
-            <button
-              key={d.id}
-              onClick={() => setDeptId(d.id)}
-              className={`w-full p-4 rounded-2xl border-2 text-left font-bold text-sm transition-all active:scale-[0.98] ${
-                deptId === d.id
-                  ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300'
-                  : 'border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span>{d.name}</span>
-                {deptId === d.id && <span className="text-brand-500">✓</span>}
-              </div>
-            </button>
-          ))}
+          {teachers.length === 0 ? (
+            <p className="text-center text-slate-500 text-sm py-6">
+              현재 모집 중인 과정이 없습니다.<br />선생님께 문의하세요.
+            </p>
+          ) : (
+            teachers.map(t => {
+              const label = `${t.department.name}(${t.name} 선생님)`;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTeacherId(t.id)}
+                  className={`w-full p-4 rounded-2xl border-2 text-left font-bold text-sm transition-all active:scale-[0.98] ${
+                    teacherId === t.id
+                      ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300'
+                      : 'border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span>{label}</span>
+                    {teacherId === t.id && <span className="text-brand-500">✓</span>}
+                  </div>
+                </button>
+              );
+            })
+          )}
         </div>
 
         {/* 경고 문구 */}
-        {!deptId && (
+        {!teacherId && teachers.length > 0 && (
           <p className="text-center text-rose-500 text-xs font-bold mb-4 bg-rose-50 dark:bg-rose-950/30 py-2.5 rounded-xl">
-            ⚠️ 전공을 선택하지 않으면 시험을 볼 수 없습니다
+            ⚠️ 과정을 선택하지 않으면 시험을 볼 수 없습니다
           </p>
         )}
 
         {/* 확인 메시지 */}
-        {deptId && (
+        {teacherId && (
           <p className="text-center text-emerald-600 text-xs font-bold mb-4 bg-emerald-50 dark:bg-emerald-950/30 py-2.5 rounded-xl">
-            ✓ {selectedDept?.name} — 이 전공으로 가입합니다
+            ✓ {selectedLabel} — 이 과정으로 가입합니다
           </p>
         )}
 
         <button
           onClick={handleSave}
-          disabled={!deptId || saving}
+          disabled={!teacherId || saving}
           className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {saving ? '저장 중...' : '전공 선택 완료'}
+          {saving ? '저장 중...' : '과정 선택 완료'}
         </button>
 
         <p className="text-center text-xs text-slate-400 mt-4">
-          가입 후 전공 변경은 선생님에게 문의하세요
+          가입 후 과정 변경은 선생님에게 문의하세요
         </p>
       </div>
     </div>

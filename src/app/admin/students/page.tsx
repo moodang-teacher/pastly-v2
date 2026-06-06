@@ -24,7 +24,7 @@ export default function StudentsPage() {
     const t = teacherData || teacher;
     if (!t) return;
 
-    // 내 전공 활성 기수
+    // 내 활성 기수 (배정 드롭다운용)
     const { data: ch } = await supabase
       .from("cohorts")
       .select("*")
@@ -34,21 +34,29 @@ export default function StudentsPage() {
     setCohorts(ch || []);
     if (ch && ch.length > 0 && !selectedCohort) setSelectedCohort(ch[0].id);
 
-    // 내 전공인데 기수 미배정 학생 (신규 가입자)
+    // 내 담당 학생 중 기수 미배정 (teacher_id 기준으로 본인 학생만)
     const { data: waiting } = await supabase
       .from("students")
       .select("*")
-      .eq("department_id", t.department_id)
+      .eq("teacher_id", t.id)
       .is("cohort_id", null)
       .order("created_at", { ascending: false });
     setWaitingStudents(waiting || []);
 
-    // 내 전공 + 기수 배정된 학생
+    // 내 기수(아카이브 포함)에 배정된 학생만 조회
+    const { data: allMyCohorts } = await supabase
+      .from("cohorts")
+      .select("id")
+      .eq("teacher_id", t.id);
+    const myCohortIds = (allMyCohorts || []).map((c: any) => c.id);
+    if (myCohortIds.length === 0) {
+      setMyStudents([]);
+      return;
+    }
     const { data: assigned } = await supabase
       .from("students")
       .select("*, cohort:cohorts(name)")
-      .eq("department_id", t.department_id)
-      .not("cohort_id", "is", null)
+      .in("cohort_id", myCohortIds)
       .order("name");
     setMyStudents(assigned || []);
   }

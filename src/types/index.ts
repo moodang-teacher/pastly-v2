@@ -38,7 +38,8 @@ export interface Student {
   user_id: string;
   name: string;
   department_id: string;
-  cohort_id: string;
+  cohort_id: string | null;
+  teacher_id: string | null;
   total_attempts: number;
   high_score: number;
   photo_url: string | null;

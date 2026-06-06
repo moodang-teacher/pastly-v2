@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 
-interface Department {
+interface TeacherOption {
 	id: string;
 	name: string;
-	slug: string;
-	parent_id: string | null;
+	department_id: string;
+	department: { name: string; slug: string };
 }
 
 export default function LoginPage() {
@@ -20,29 +20,30 @@ export default function LoginPage() {
 	const [name, setName] = useState('');
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
-	const [deptId, setDeptId] = useState('');
-	const [departments, setDepartments] = useState<Department[]>([]);
+	const [teacherId, setTeacherId] = useState('');
+	const [teachers, setTeachers] = useState<TeacherOption[]>([]);
 	const [showPw, setShowPw] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
 
-	// 전공 목록 로드 (미용 부모 제외, 실제 선택 가능한 전공만)
+	// 선생님 목록 로드 (전공 정보 포함, 마스터 제외)
 	useEffect(() => {
-		async function loadDepts() {
+		async function loadTeachers() {
 			const { data } = await supabase
-				.from('departments')
-				.select('*')
-				.eq('is_active', true)
-				.order('name');
-			// 미용(부모) 제외 - slug가 'beauty'인 것만 제외
-			const filtered = (data || []).filter(
-				(d: Department) => d.slug !== 'beauty',
-			);
-			setDepartments(filtered);
-			// 기본값을 빈 값으로 - 반드시 선택하게
-			setDeptId('');
+				.from('teachers')
+				.select('id, name, department_id, department:departments(name, slug)')
+				.eq('is_master', false);
+			// 미용 부모(slug: 'beauty') 제외
+			const filtered = (data || [])
+				.filter((t: any) => t.department?.[0]?.slug !== 'beauty')
+				.map((t: any): TeacherOption => ({
+					...t,
+					department: t.department?.[0] ?? { name: '', slug: '' },
+				}));
+			setTeachers(filtered);
+			setTeacherId('');
 		}
-		loadDepts();
+		loadTeachers();
 	}, []);
 
 	async function handleSubmit(e: React.FormEvent) {
@@ -62,17 +63,20 @@ export default function LoginPage() {
 				// 로그인 성공 시 loading을 해제하지 않음 — 네비게이션 완료까지 "처리중" 유지
 			} else {
 				if (!name.trim()) throw new Error('이름을 입력해주세요.');
-				if (!deptId)
+				if (!teacherId)
 					throw new Error(
-						'전공을 선택해주세요. 전공을 선택하지 않으면 시험을 볼 수 없습니다!',
+						'과정을 선택해주세요. 과정을 선택하지 않으면 시험을 볼 수 없습니다!',
 					);
 				if (password.length < 6)
 					throw new Error('비밀번호는 6자 이상이어야 합니다.');
 
-				const selectedDeptName = departments.find((d) => d.id === deptId)?.name;
+				const selected = teachers.find((t) => t.id === teacherId);
+				const displayName = selected
+					? `${selected.department.name}(${selected.name} 선생님)`
+					: '';
 				if (
 					!confirm(
-						`전공: ${selectedDeptName}\n\n이 전공으로 가입하시겠습니까?\n가입 후 전공 변경은 선생님을 통해서만 가능합니다.`,
+						`과정: ${displayName}\n\n이 과정으로 가입하시겠습니까?\n가입 후 변경은 선생님을 통해서만 가능합니다.`,
 					)
 				) {
 					setLoading(false);
@@ -83,16 +87,17 @@ export default function LoginPage() {
 				if (error) throw new Error(error.message);
 				if (!data.user) throw new Error('회원가입 중 오류가 발생했습니다.');
 
-				// 학생 프로필 생성 (전공 포함, 기수는 선생님이 배정)
+				// 학생 프로필 생성 (전공 + 담당 선생님 저장, 기수 배정은 선생님이 수동으로)
 				await supabase.from('students').insert({
 					user_id: data.user.id,
 					name: name.trim(),
-					department_id: deptId,
+					department_id: selected!.department_id,
+					teacher_id: teacherId,
 					total_attempts: 0,
 					high_score: 0,
 				});
 
-				alert('회원가입이 완료되었습니다!\n선생님께 기수 배정을 요청하세요.');
+				alert('회원가입이 완료되었습니다!\n선생님께 반 배정을 요청하세요.');
 				setTab('login');
 				setLoading(false);
 			}
@@ -168,32 +173,38 @@ export default function LoginPage() {
 								onChange={(e) => setName(e.target.value)}
 								required
 							/>
-							{/* 전공 선택 */}
+							{/* 과정(담당 선생님) 선택 */}
 							<div>
 								<label className="text-xs font-bold text-slate-500 mb-1.5 block px-1">
-									전공 선택 <span className="text-rose-500">*</span>
+									과정 선택 <span className="text-rose-500">*</span>
 								</label>
-								<select
-									value={deptId}
-									onChange={(e) => setDeptId(e.target.value)}
-									className={`input-field ${!deptId ? 'border-2 border-rose-400 dark:border-rose-500 bg-rose-50 dark:bg-rose-950/30' : 'border-2 border-emerald-400'}`}
-									required
-								>
-									<option value="">⚠️ 반드시 전공을 선택하세요</option>
-									{departments.map((d) => (
-										<option key={d.id} value={d.id}>
-											{d.name}
-										</option>
-									))}
-								</select>
-								{!deptId && (
+								{teachers.length === 0 ? (
+									<p className="text-slate-500 text-xs font-bold px-1 py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl text-center">
+										현재 모집 중인 과정이 없습니다. 선생님께 문의하세요.
+									</p>
+								) : (
+									<select
+										value={teacherId}
+										onChange={(e) => setTeacherId(e.target.value)}
+										className={`input-field ${!teacherId ? 'border-2 border-rose-400 dark:border-rose-500 bg-rose-50 dark:bg-rose-950/30' : 'border-2 border-emerald-400'}`}
+										required
+									>
+										<option value="">⚠️ 반드시 과정을 선택하세요</option>
+										{teachers.map((t) => (
+											<option key={t.id} value={t.id}>
+												{t.department.name}({t.name} 선생님)
+											</option>
+										))}
+									</select>
+								)}
+								{!teacherId && teachers.length > 0 && (
 									<p className="text-rose-500 text-xs font-bold mt-1.5 px-1">
-										전공을 선택하지 않으면 시험을 볼 수 없습니다!
+										과정을 선택하지 않으면 시험을 볼 수 없습니다!
 									</p>
 								)}
-								{deptId && (
+								{teacherId && (
 									<p className="text-emerald-500 text-xs font-bold mt-1.5 px-1">
-										✓ {departments.find((d) => d.id === deptId)?.name} 선택됨
+										✓ {(() => { const t = teachers.find(x => x.id === teacherId); return t ? `${t.department.name}(${t.name} 선생님)` : ''; })()} 선택됨
 									</p>
 								)}
 							</div>

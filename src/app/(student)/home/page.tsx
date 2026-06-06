@@ -208,6 +208,7 @@ export default function HomePage() {
 
 	function startQuiz(mode: string) {
 		if (!department) return alert('선생님께 전공 배정을 요청해주세요.');
+		if (!student?.cohort_id) return alert('선생님께 반 배정을 요청해주세요.');
 		router.push(`/quiz?type=${mode}&dept=${department.id}`);
 	}
 
