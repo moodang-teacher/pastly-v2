@@ -11,8 +11,20 @@
   .header h1 { font-size: 1.4rem; font-weight: 800; }
   .header p { font-size: 0.85rem; opacity: 0.85; margin-top: 4px; }
   .container { max-width: 680px; margin: 0 auto; padding: 20px; }
+
+  /* TOC */
+  .toc { background: white; border-radius: 16px; padding: 18px 20px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  .toc h2 { font-size: 0.9rem; font-weight: 800; color: #6d5ef1; margin-bottom: 10px; }
+  .toc-list { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+  .toc-list li a { display: block; background: #f1f0fe; color: #4f46e5; padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; text-decoration: none; }
+  .toc-list li a:hover { background: #6d5ef1; color: white; }
+
+  /* Chapter label */
+  .chapter-label { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; color: #a5b4fc; text-transform: uppercase; margin-bottom: 4px; }
+
   .section { background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
   h2 { font-size: 1rem; font-weight: 800; color: #6d5ef1; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  h3 { font-size: 0.88rem; font-weight: 800; color: #334155; margin: 14px 0 6px; }
   table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   th { background: #f1f0fe; color: #6d5ef1; text-align: left; padding: 8px 10px; font-weight: 700; }
   td { padding: 8px 10px; border-top: 1px solid #f1f5f9; vertical-align: top; }
@@ -23,26 +35,143 @@
   .steps li:first-child { border-top: none; }
   .steps li::before { content: counter(step); position: absolute; left: 0; top: 9px; width: 24px; height: 24px; background: #6d5ef1; color: white; border-radius: 50%; font-size: 0.75rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
   .tip { background: #fef9c3; border-left: 3px solid #eab308; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-top: 10px; }
+  .info { background: #eff6ff; border-left: 3px solid #3b82f6; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-top: 10px; }
   .gem-btn { display: inline-block; background: #6d5ef1; color: white; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 0.9rem; margin-top: 10px; }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
   .badge-purple { background: #f1f0fe; color: #6d5ef1; }
   .badge-green { background: #dcfce7; color: #16a34a; }
+  .badge-red { background: #fee2e2; color: #dc2626; }
   p { font-size: 0.9rem; margin-top: 6px; }
   ul { padding-left: 18px; font-size: 0.88rem; }
   ul li { margin-top: 4px; }
+
+  /* Level grid */
+  .level-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+  .level-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
+  .level-item .emoji { font-size: 1.1rem; }
+  .level-item .label { font-weight: 700; color: #1e293b; }
+  .level-item .req { color: #64748b; font-size: 0.75rem; margin-left: auto; }
+  @media (max-width: 480px) { .level-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 
 <div class="header">
   <h1>📝 Pastly 선생님 가이드</h1>
-  <p>문제 업로드 방법 안내</p>
+  <p>기수 생성 · 학생 관리 · 레벨 시스템 · 문제 업로드</p>
 </div>
 
 <div class="container">
 
-  <!-- 시험 유형 -->
-  <div class="section">
+  <!-- TOC -->
+  <div class="toc">
+    <h2>목차</h2>
+    <ul class="toc-list">
+      <li><a href="#cohort">1. 기수 생성</a></li>
+      <li><a href="#students">2. 학생 관리</a></li>
+      <li><a href="#levels">3. 레벨 시스템</a></li>
+      <li><a href="#exam-types">4. 시험 유형</a></li>
+      <li><a href="#gems">5. JSON 만들기</a></li>
+      <li><a href="#upload">6. 업로드 방법</a></li>
+      <li><a href="#common">7. 공통 과목</a></li>
+      <li><a href="#mistakes">8. 자주 하는 실수</a></li>
+    </ul>
+  </div>
+
+  <!-- ① 기수 생성 -->
+  <div class="section" id="cohort">
+    <div class="chapter-label">Chapter 1</div>
+    <h2>🏫 기수 생성</h2>
+    <p>기수는 학생을 묶는 <strong>반(班) 단위</strong>입니다. 학생을 배정하기 전에 기수를 먼저 만들어 주세요.</p>
+
+    <h3>만드는 방법</h3>
+    <ol class="steps">
+      <li>관리자 페이지 → <strong>기수 관리</strong> 탭</li>
+      <li>기수명 입력 (예: <code>2025-1기</code>, <code>7월반</code>)</li>
+      <li><strong>생성</strong> 버튼 클릭 → "활성 기수" 목록에 추가됨</li>
+    </ol>
+
+    <h3>아카이브 (수료 처리)</h3>
+    <p>수업이 끝난 기수는 <strong>아카이브</strong> 버튼으로 보관 처리합니다.</p>
+    <ul>
+      <li>학생 기록은 그대로 남고, 신규 배정만 막힘</li>
+      <li>아카이브된 기수는 하단 "아카이브" 섹션으로 이동</li>
+    </ul>
+    <div class="tip">💡 기수가 하나도 없으면 학생 배정을 할 수 없습니다. 학생 등록 전에 기수를 먼저 만드세요.</div>
+  </div>
+
+  <!-- ② 학생 관리 -->
+  <div class="section" id="students">
+    <div class="chapter-label">Chapter 2</div>
+    <h2>👩‍🎓 학생 관리</h2>
+
+    <h3>학생 가입 흐름</h3>
+    <ol class="steps">
+      <li>학생이 앱에서 <strong>회원가입</strong> → 전공과 선생님 선택</li>
+      <li>가입 직후 <span class="badge badge-red">기수 배정 대기</span> 상태로 목록에 나타남</li>
+      <li>선생님이 배정할 기수를 선택 후 <strong>배정</strong></li>
+      <li>배정 완료 → 학생이 시험을 볼 수 있게 됨</li>
+    </ol>
+
+    <h3>배정 대기 목록</h3>
+    <p>관리자 페이지 → <strong>학생 관리</strong>의 상단 섹션에 표시됩니다.</p>
+    <table>
+      <tr><th>버튼</th><th>설명</th></tr>
+      <tr><td>배정</td><td>선택한 학생을 기수에 개별 배정</td></tr>
+      <tr><td>선택 N명 배정</td><td>체크박스로 고른 학생을 한 번에 배정</td></tr>
+      <tr><td>전체 배정</td><td>대기 중인 모든 학생을 같은 기수에 배정</td></tr>
+      <tr><td>전공변경</td><td>다른 선생님 반으로 이동 (기수 배정 초기화)</td></tr>
+    </table>
+
+    <h3>배정된 학생 목록</h3>
+    <p>이미 기수에 배정된 학생 전체를 이름 검색으로 찾을 수 있습니다.</p>
+    <table>
+      <tr><th>항목</th><th>내용</th></tr>
+      <tr><td>레벨</td><td>풀어본 문제 수 기반 자동 산정</td></tr>
+      <tr><td>최고점수</td><td>지금까지의 최고 모의고사 점수</td></tr>
+      <tr><td>문제 수</td><td>누적 풀이 문제 수 (= XP)</td></tr>
+      <tr><td>❌ 버튼</td><td>기수 배정 해제 (학생 계정 삭제 아님)</td></tr>
+    </table>
+    <div class="info">ℹ️ 기수 배정을 해제하면 해당 학생은 다시 "배정 대기" 상태로 돌아갑니다.</div>
+  </div>
+
+  <!-- ③ 레벨 시스템 -->
+  <div class="section" id="levels">
+    <div class="chapter-label">Chapter 3</div>
+    <h2>🏆 레벨 시스템</h2>
+    <p>학생이 문제를 풀수록 <strong>누적 풀이 수(XP)</strong>가 쌓여 레벨이 오릅니다. 기출 · 모의 · Crash Test 모두 XP에 반영됩니다.</p>
+
+    <h3>레벨 일람</h3>
+    <div class="level-grid">
+      <div class="level-item"><span class="emoji">🗿</span><span class="label">STONE</span><span class="req">0문제~</span></div>
+      <div class="level-item"><span class="emoji">⚙️</span><span class="label">IRON</span><span class="req">30문제~</span></div>
+      <div class="level-item"><span class="emoji">🥉</span><span class="label">BRONZE II</span><span class="req">60문제~</span></div>
+      <div class="level-item"><span class="emoji">🥉</span><span class="label">BRONZE I</span><span class="req">120문제~</span></div>
+      <div class="level-item"><span class="emoji">🥈</span><span class="label">SILVER II</span><span class="req">200문제~</span></div>
+      <div class="level-item"><span class="emoji">🥈</span><span class="label">SILVER I</span><span class="req">300문제~</span></div>
+      <div class="level-item"><span class="emoji">🥇</span><span class="label">GOLD II</span><span class="req">450문제~</span></div>
+      <div class="level-item"><span class="emoji">🥇</span><span class="label">GOLD I</span><span class="req">600문제~</span></div>
+      <div class="level-item"><span class="emoji">💠</span><span class="label">PLATINUM II</span><span class="req">800문제~</span></div>
+      <div class="level-item"><span class="emoji">💠</span><span class="label">PLATINUM I</span><span class="req">1,000문제~</span></div>
+      <div class="level-item"><span class="emoji">💎</span><span class="label">DIAMOND</span><span class="req">1,300문제~</span></div>
+      <div class="level-item"><span class="emoji">✨</span><span class="label">EXPERT</span><span class="req">1,700문제~</span></div>
+      <div class="level-item"><span class="emoji">🏆</span><span class="label">MASTER</span><span class="req">2,200문제~</span></div>
+      <div class="level-item"><span class="emoji">👑</span><span class="label">GRANDMASTER</span><span class="req">2,800문제~</span></div>
+      <div class="level-item"><span class="emoji">⚡</span><span class="label">LEGEND</span><span class="req">3,500문제~</span></div>
+    </div>
+
+    <h3>명예의 전당 (랭킹)</h3>
+    <ul>
+      <li>전공별 <strong>최고점수 TOP 10</strong> 학생이 표시됨</li>
+      <li>문제를 한 번도 풀지 않은 학생은 랭킹에서 제외됨</li>
+      <li>학생 홈 화면에서 자신의 레벨과 랭킹 확인 가능</li>
+    </ul>
+    <div class="tip">💡 시험 점수가 아니라 "풀어본 문제 수"가 레벨을 결정합니다. 많이 풀수록 레벨이 오릅니다.</div>
+  </div>
+
+  <!-- ④ 시험 유형 -->
+  <div class="section" id="exam-types">
+    <div class="chapter-label">Chapter 4</div>
     <h2>📌 시험 유형</h2>
     <table>
       <tr><th>유형</th><th>설명</th></tr>
@@ -52,22 +181,32 @@
     </table>
   </div>
 
-  <!-- Google Gems -->
-  <div class="section">
+  <!-- ⑤ Google Gems -->
+  <div class="section" id="gems">
+    <div class="chapter-label">Chapter 5</div>
     <h2>🤖 Google Gems로 JSON 만들기</h2>
     <a class="gem-btn" href="https://gemini.google.com/gem/1Q4vqDe5Odxk5KrBwNz1Lj0UYtxLtUgyP?usp=sharing" target="_blank">📎 Gems 바로가기</a>
     <ol class="steps" style="margin-top: 14px;">
       <li>위 링크에서 Gems 접속 (Google 로그인 필요)</li>
       <li>기출문제 PDF 또는 이미지를 채팅창에 업로드</li>
       <li><span class="badge badge-purple">기출문제용</span> 또는 <span class="badge badge-green">모의고사용</span> 중 선택해서 요청</li>
-      <li>출력된 JSON 전체 복사 → 메모장 붙여넣기 → <code>.json</code> 파일로 저장</li>
+      <li>Gems 화면 상단의 <strong>다운로드 버튼</strong>으로 <code>.json</code> 파일 저장</li>
     </ol>
-    <div class="tip">💡 파일명 예시: <code>헤어_기출_20250601.json</code></div>
+    <div class="tip">💡 메모장에 복사/붙여넣기도 가능하나, 실수를 줄이기 위해 가급적 다운로드를 이용하세요.</div>
   </div>
 
-  <!-- JSON 형식 -->
-  <div class="section">
-    <h2>📄 JSON 형식 참고</h2>
+  <!-- ⑥ JSON 형식 & 업로드 -->
+  <div class="section" id="upload">
+    <div class="chapter-label">Chapter 6</div>
+    <h2>⬆️ 업로드 방법</h2>
+    <ol class="steps">
+      <li>관리자 페이지 → <strong>문제 관리</strong></li>
+      <li>전공 / 시험 유형 선택</li>
+      <li>미용 공통 과목이면 <strong>"공통 과목"</strong> 토글 ON</li>
+      <li>JSON 파일 선택 → 문제 수 확인 → <strong>업로드</strong></li>
+    </ol>
+
+    <h3>JSON 형식 참고</h3>
     <p><code>answer_index</code>: 1번 정답=<code>0</code>, 2번=<code>1</code>, 3번=<code>2</code>, 4번=<code>3</code></p>
     <pre>{
   "questions": [
@@ -82,19 +221,9 @@
 }</pre>
   </div>
 
-  <!-- 업로드 방법 -->
-  <div class="section">
-    <h2>⬆️ 업로드 방법</h2>
-    <ol class="steps">
-      <li>관리자 페이지 → <strong>문제 관리</strong></li>
-      <li>전공 / 시험 유형 선택</li>
-      <li>미용 공통 과목이면 <strong>"공통 과목"</strong> 토글 ON</li>
-      <li>JSON 파일 선택 → 문제 수 확인 → <strong>업로드</strong></li>
-    </ol>
-  </div>
-
-  <!-- 공통 과목 -->
-  <div class="section">
+  <!-- ⑦ 공통 과목 -->
+  <div class="section" id="common">
+    <div class="chapter-label">Chapter 7</div>
     <h2>🔗 공통 과목 안내</h2>
     <p>공중위생관리학 · 화장품학 · 피부학은 <strong>모든 미용 세부전공 학생이 공유</strong>합니다.</p>
     <ul>
@@ -103,8 +232,9 @@
     </ul>
   </div>
 
-  <!-- 자주 하는 실수 -->
-  <div class="section">
+  <!-- ⑧ 자주 하는 실수 -->
+  <div class="section" id="mistakes">
+    <div class="chapter-label">Chapter 8</div>
     <h2>⚠️ 자주 하는 실수</h2>
     <table>
       <tr><th>상황</th><th>해결</th></tr>
@@ -112,6 +242,8 @@
       <tr><td>문제 수 부족</td><td>파일 나눠서 여러 번 올려도 됨 (자동 합산)</td></tr>
       <tr><td>그림 있는 문제</td><td>"문제 1개 직접 입력" 탭에서 이미지 첨부</td></tr>
       <tr><td>문제 임시 제거</td><td>문제 목록 👁️ 버튼으로 비활성화 (삭제 아님)</td></tr>
+      <tr><td>학생이 시험을 못 봄</td><td>기수 배정 확인 — 배정 대기 상태면 기수 배정 필요</td></tr>
+      <tr><td>기수 배정 버튼이 없음</td><td>활성 기수가 0개 → 기수 관리에서 기수 먼저 생성</td></tr>
     </table>
   </div>
 
