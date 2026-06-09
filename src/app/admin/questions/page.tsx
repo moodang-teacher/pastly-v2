@@ -6,6 +6,7 @@ import type { Question, UploadPayload } from "@/types";
 import LoadingScreen from "@/components/LoadingScreen";
 import {
   Upload,
+  Download,
   Trash2,
   Eye,
   EyeOff,
@@ -102,6 +103,7 @@ export default function QuestionsPage() {
   const [sImagePreview, setSImagePreview] = useState("");
   const [sSaving, setSSaving] = useState(false);
   const [sSaveResult, setSSaveResult] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   async function loadCounts(t?: any) {
     const td = t || teacher;
@@ -225,7 +227,7 @@ export default function QuestionsPage() {
     const rows = parsed.questions.map((q) => ({
       department_id: deptId,
       is_common: isCommon,
-      exam_type: uploadType,
+      exam_type: (q as any).exam_type ?? uploadType,
       category: q.category,
       question_text: q.question_text,
       options: q.options,
@@ -341,6 +343,37 @@ export default function QuestionsPage() {
       setSSaveResult(`❌ ${err.message}`);
     }
     setSSaving(false);
+  }
+
+  async function handleExport() {
+    if (!teacher) return;
+    setExporting(true);
+    const { data: qs } = await supabase
+      .from("questions")
+      .select("*")
+      .eq("department_id", teacher.department_id)
+      .eq("is_active", true)
+      .order("category", { ascending: true });
+    const payload = {
+      questions: (qs || []).map((q: Question) => ({
+        category: q.category,
+        question_text: q.question_text,
+        options: q.options,
+        answer_index: q.answer_index,
+        exam_type: q.exam_type,
+        ...(q.explanation ? { explanation: q.explanation } : {}),
+        ...(q.image_url ? { image_url: q.image_url } : {}),
+      })),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    a.download = `${teacher.department?.name || "문제"}_${date}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExporting(false);
   }
 
   async function toggleActive(q: Question) {
@@ -766,9 +799,19 @@ export default function QuestionsPage() {
       {/* 등록된 전체 문제 수 */}
       {totalCounts !== null && (
         <div className="card p-5">
-          <h2 className="font-black text-slate-800 dark:text-white mb-3">
-            등록된 전체 문제
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-black text-slate-800 dark:text-white">
+              등록된 전체 문제
+            </h2>
+            <button
+              onClick={handleExport}
+              disabled={exporting || totalCounts.total === 0}
+              className="flex items-center gap-1.5 text-xs font-bold text-brand-600 dark:text-brand-400 disabled:opacity-40 disabled:cursor-not-allowed hover:underline"
+            >
+              <Download size={13} />
+              {exporting ? "내보내는 중..." : "JSON 내보내기"}
+            </button>
+          </div>
           {teacher?.department?.slug?.startsWith("beauty-") ? (
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 text-center">
