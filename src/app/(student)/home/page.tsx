@@ -142,6 +142,11 @@ export default function HomePage() {
 
 		if (!st) {
 			if (teacher) {
+				const teacherDeptId = (teacher as any).department?.id;
+				if (teacherDeptId) {
+					const { data: rank } = await supabase.rpc('get_rankings', { p_department_id: teacherDeptId });
+					setRankings(rank || []);
+				}
 				setLoading(false);
 				return;
 			}
@@ -181,7 +186,7 @@ export default function HomePage() {
 				.from('wrong_answers')
 				.select('*', { count: 'exact', head: true })
 				.eq('student_id', st.id),
-			supabase.rpc('get_rankings', { p_department_id: st.department_id }),
+			supabase.rpc('get_rankings', { p_department_id: teacher ? (teacher as any).department?.id : st.department_id }),
 		]);
 		setWrongCount(count || 0);
 		setRankings(rank || []);
