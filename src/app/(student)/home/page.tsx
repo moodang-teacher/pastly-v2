@@ -33,7 +33,7 @@ const EXAM_TYPES = [
 		desc: '실제 기출문제 랜덤 60문항',
 	},
 	{ value: 'mock', label: '✏️ 모의고사', desc: '선생님이 구성한 모의고사' },
-	{ value: 'crash', label: '⚡ Crash Test', desc: '전체 문제 랜덤 출제' },
+	{ value: 'crash', label: '⚡ Crash Test', desc: '기출문제 랜덤 20문항' },
 ];
 
 // 이미지 압축 함수
