@@ -31,7 +31,7 @@ BEGIN
         FROM questions q
         WHERE q.department_id = p_department_id
           AND q.is_common = false
-          AND q.exam_type = p_exam_type
+          AND (p_exam_type = 'crash' OR q.exam_type = p_exam_type)
           AND q.is_active = true
         ORDER BY q.question_text, random()
       ) deduped
@@ -44,7 +44,7 @@ BEGIN
         FROM questions q
         WHERE q.department_id = v_parent_id
           AND q.is_common = true
-          AND q.exam_type = p_exam_type
+          AND (p_exam_type = 'crash' OR q.exam_type = p_exam_type)
           AND q.is_active = true
         ORDER BY q.question_text, random()
       ) deduped
@@ -64,7 +64,7 @@ BEGIN
         SELECT DISTINCT ON (question_text) *
         FROM questions
         WHERE department_id = p_department_id
-          AND exam_type = p_exam_type
+          AND (p_exam_type = 'crash' OR exam_type = p_exam_type)
           AND is_active = true
         ORDER BY question_text, random()
       ) deduped
