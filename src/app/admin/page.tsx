@@ -10,18 +10,11 @@ export default async function AdminDashboard() {
     .eq('user_id', user!.id)
     .single();
 
-  // 내 반 통계
-  const { data: cohorts } = await supabase
-    .from('cohorts')
-    .select('*, students(count)')
-    .eq('teacher_id', teacher.id)
-    .eq('is_active', true);
-
-  const { count: questionCount } = await supabase
-    .from('questions')
-    .select('*', { count: 'exact', head: true })
-    .eq('uploaded_by', teacher.id)
-    .eq('is_active', true);
+  // 내 반 통계 — cohorts + questionCount 병렬, totalStudents는 cohort id 필요
+  const [{ data: cohorts }, { count: questionCount }] = await Promise.all([
+    supabase.from('cohorts').select('*, students(count)').eq('teacher_id', teacher.id).eq('is_active', true),
+    supabase.from('questions').select('*', { count: 'exact', head: true }).eq('uploaded_by', teacher.id).eq('is_active', true),
+  ]);
 
   const { count: totalStudents } = await supabase
     .from('students')

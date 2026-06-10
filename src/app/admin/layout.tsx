@@ -15,9 +15,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!teacher) redirect('/home');
 
+  const isEmailUser = user.identities?.some((i: any) => i.provider === 'email') ?? false;
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <AdminNav teacher={teacher} />
+      <AdminNav teacher={teacher} isEmailUser={isEmailUser} />
       <main className="max-w-2xl mx-auto p-5 pt-6">
         {children}
       </main>

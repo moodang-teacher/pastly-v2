@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
 	Users,
 	BookOpen,
@@ -23,18 +23,11 @@ const NAV = [
 	{ href: '/admin/reset', icon: RotateCcw, label: '초기화' },
 ];
 
-export default function AdminNav({ teacher }: { teacher: any }) {
+export default function AdminNav({ teacher, isEmailUser }: { teacher: any; isEmailUser: boolean }) {
 	const path = usePathname();
 	const router = useRouter();
 	const supabase = createClient();
-	const [isEmailUser, setIsEmailUser] = useState(false);
 	const [showPwModal, setShowPwModal] = useState(false);
-
-	useEffect(() => {
-		supabase.auth.getUser().then(({ data: { user } }) => {
-			setIsEmailUser(user?.identities?.some((i) => i.provider === 'email') ?? false);
-		});
-	}, []);
 
 	async function logout() {
 		await supabase.auth.signOut();

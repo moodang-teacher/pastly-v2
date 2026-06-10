@@ -9,7 +9,6 @@ import LoadingScreen from '@/components/LoadingScreen';
 
 // ── 슬롯머신 숫자 컴포넌트 ──────────────────────────────────
 function SlotDigit({ digit, delay }: { digit: string; delay: number }) {
-	const nums = '0123456789';
 	const target = parseInt(digit, 10);
 	// 0부터 target까지 배열 생성
 	const sequence = [];
@@ -316,26 +315,30 @@ function QuizContent() {
 				return;
 			}
 
-			const { data: st } = await supabase
-				.from('students')
-				.select('*')
-				.eq('user_id', user.id)
-				.single();
-			setStudent(st);
-
 			let qs: Question[] = [];
 
 			if (examType === 'wrong') {
+				const { data: st } = await supabase
+					.from('students')
+					.select('*')
+					.eq('user_id', user.id)
+					.single();
+				setStudent(st);
 				const { data: wa } = await supabase
 					.from('wrong_answers')
 					.select('question:questions(*)')
 					.eq('student_id', st?.id);
 				qs = (wa || []).map((w: any) => w.question).filter(Boolean);
 			} else {
-				const { data, error } = await supabase.rpc('get_quiz_questions', {
-					p_department_id: deptId,
-					p_exam_type: examType,
-				});
+				// student 조회와 문제 RPC를 병렬 실행
+				const [{ data: st }, { data, error }] = await Promise.all([
+					supabase.from('students').select('*').eq('user_id', user.id).single(),
+					supabase.rpc('get_quiz_questions', {
+						p_department_id: deptId,
+						p_exam_type: examType,
+					}),
+				]);
+				setStudent(st);
 				if (error) {
 					console.error('문제 불러오기 RPC 오류:', error);
 					alert(`문제를 불러오는 중 오류가 발생했습니다.\n오류: ${error.message}`);

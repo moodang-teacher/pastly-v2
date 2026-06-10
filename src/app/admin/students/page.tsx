@@ -24,30 +24,16 @@ export default function StudentsPage() {
     const t = teacherData || teacher;
     if (!t) return;
 
-    // 내 활성 기수 (배정 드롭다운용)
-    const { data: ch } = await supabase
-      .from("cohorts")
-      .select("*")
-      .eq("teacher_id", t.id)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false });
+    // 활성기수, 대기학생, 전체기수 병렬 조회
+    const [{ data: ch }, { data: waiting }, { data: allMyCohorts }] = await Promise.all([
+      supabase.from("cohorts").select("*").eq("teacher_id", t.id).eq("is_active", true).order("created_at", { ascending: false }),
+      supabase.from("students").select("*").eq("teacher_id", t.id).is("cohort_id", null).order("created_at", { ascending: false }),
+      supabase.from("cohorts").select("id").eq("teacher_id", t.id),
+    ]);
     setCohorts(ch || []);
     if (ch && ch.length > 0 && !selectedCohort) setSelectedCohort(ch[0].id);
-
-    // 내 담당 학생 중 기수 미배정 (teacher_id 기준으로 본인 학생만)
-    const { data: waiting } = await supabase
-      .from("students")
-      .select("*")
-      .eq("teacher_id", t.id)
-      .is("cohort_id", null)
-      .order("created_at", { ascending: false });
     setWaitingStudents(waiting || []);
 
-    // 내 기수(아카이브 포함)에 배정된 학생만 조회
-    const { data: allMyCohorts } = await supabase
-      .from("cohorts")
-      .select("id")
-      .eq("teacher_id", t.id);
     const myCohortIds = (allMyCohorts || []).map((c: any) => c.id);
     if (myCohortIds.length === 0) {
       setMyStudents([]);
